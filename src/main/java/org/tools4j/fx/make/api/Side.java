@@ -21,8 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make;
+package org.tools4j.fx.make.api;
 
+/**
+ * The side of an order.
+ */
 public enum Side {
 	/**
 	 * BUY side aka BID.
