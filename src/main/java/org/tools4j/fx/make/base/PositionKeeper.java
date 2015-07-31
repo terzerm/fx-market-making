@@ -23,39 +23,54 @@
  */
 package org.tools4j.fx.make.base;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.tools4j.fx.make.api.Order;
 import org.tools4j.fx.make.api.Side;
 
 /**
- * Keeps track of a position.
+ * Keeps track positions for several symbols.
  * <p>
- * The class is thread safe and lock free.
+ * The class is thread safe.
  */
 public class PositionKeeper {
 	
-	private final AtomicLong position = new AtomicLong();
+	private final ConcurrentMap<String, Long> positionBySymbol = new ConcurrentHashMap<>();
 
-	public boolean updateIfNotExceedsMax(Order order, long maxPositionSize) {
+	public long fillWithoutExceedingMax(Order order, boolean allowPartial, long maxPositionSize) {
 		if (maxPositionSize < 0) {
 			throw new IllegalArgumentException("max position size is negative: " + maxPositionSize);
 		}
-		final long qty = getSignedOrderQuantity(order);
-		long pos = position.get();
-		while (Math.abs(pos + qty) <= maxPositionSize) {
-			if (position.compareAndSet(pos, pos + qty)) {
-				return true;
+		final String symbol = order.getSymbol();
+		final long orderQty = getSignedOrderQuantity(order);
+		long pos = getPosition(symbol);
+		long qty = allowPartial ? Math.min(orderQty, maxPositionSize - Math.abs(pos)) : orderQty;
+		while (qty != 0 && Math.abs(pos + qty) <= maxPositionSize) {
+			if (compareAndSet(symbol, pos, pos + qty)) {
+				return qty;
 			}
 			// concurrent update, try again
-			pos = position.get();
+			pos = getPosition(symbol);
+			if (allowPartial) {
+				qty = Math.min(orderQty, maxPositionSize - Math.abs(pos));
+			}
 		}
-		// position would exceed max allowed limit, reject
-		return false;
+		// no or not enough quantity left
+		return 0;
 	}
 	
-	public long update(Order order) {
-		return position.addAndGet(getSignedOrderQuantity(order));
+	private boolean compareAndSet(String symbol, long expectedPosition, long newPosition) {
+		if (newPosition == 0) {
+			return positionBySymbol.remove(symbol, expectedPosition);
+		}
+		if (expectedPosition == 0) {
+			final Long old = positionBySymbol.putIfAbsent(symbol, newPosition);
+			if (old == null || old.longValue() == 0) {
+				return true;
+			}
+		}
+		return positionBySymbol.replace(symbol, expectedPosition, newPosition);
 	}
 	
 	private static long getSignedOrderQuantity(Order order) {
@@ -63,11 +78,16 @@ public class PositionKeeper {
 		return order.getSide() == Side.BUY ? -order.getQuantity() : order.getQuantity();
 	}
 	
-	public long getPosition() {
-		return position.get();
+	public long getPosition(String symbol) {
+		final Long position = positionBySymbol.get(symbol);
+		return position == null ? 0 : position.longValue();
 	}
 
-	public void resetPosition() {
-		position.set(0);
+	public void resetPosition(String symbol) {
+		positionBySymbol.remove(symbol);
+	}
+	
+	public void resetPositions() {
+		positionBySymbol.clear();
 	}
 }

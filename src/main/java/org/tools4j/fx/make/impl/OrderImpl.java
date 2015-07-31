@@ -27,19 +27,58 @@ import java.util.Objects;
 
 import org.tools4j.fx.make.api.Order;
 import org.tools4j.fx.make.api.Side;
+import org.tools4j.fx.make.util.StringUtil;
 
 /**
  * An immutable {@link Order}.
  */
 public class OrderImpl implements Order {
+	
+	private final long id = ID_GENERATOR.incrementAndGet();
+	private final String symbol;
+	private final String party;
 	private final Side side;
 	private final double price;
 	private final long quantity;
 
-	public OrderImpl(Side side, double price, long quantity) {
+	public OrderImpl(String symbol, String party, Side side, double price, long quantity) {
 		this.side = Objects.requireNonNull(side, "side is null");
+		this.party = Objects.requireNonNull(party, "party is null");
+		this.symbol = Objects.requireNonNull(symbol, "symbol is null");
+		if (price < 0 | Double.isNaN(price)) {
+			throw new IllegalArgumentException("illegal price: " + price);
+		}
+		if (quantity <= 0) {
+			throw new IllegalArgumentException("illegal quantity: " + quantity);
+		}
 		this.price = price;
 		this.quantity = quantity;
+	}
+	
+	public OrderImpl(Order order, long remainingQuantity) {
+		this(order.getSymbol(), order.getParty(), order.getSide(), order.getPrice(), validateRemainingQuantity(order, remainingQuantity));
+	}
+	
+	private static long validateRemainingQuantity(Order order, long remainingQuantity) {
+		if (remainingQuantity > order.getQuantity()) {
+			throw new IllegalArgumentException("remaining quantity exceeds order quantity: " + remainingQuantity + " > " + order);
+		}
+		return remainingQuantity;
+	}
+
+	@Override
+	public long getId() {
+		return id;
+	}
+
+	@Override
+	public String getSymbol() {
+		return symbol;
+	}
+
+	@Override
+	public String getParty() {
+		return party;
 	}
 
 	@Override
@@ -56,4 +95,15 @@ public class OrderImpl implements Order {
 	public long getQuantity() {
 		return quantity;
 	}
+
+	public String toShortString() {
+		return getSide() + ":" + StringUtil.formatQuantity(getQuantity()) + "@" + StringUtil.formatPrice(getPrice());
+	}
+
+	@Override
+	public String toString() {
+		return "OrderImpl [id=" + id + ", symbol=" + symbol + ", party=" + party + ", side=" + side + ", price=" + price
+				+ ", quantity=" + quantity + "]";
+	}
+	
 }
