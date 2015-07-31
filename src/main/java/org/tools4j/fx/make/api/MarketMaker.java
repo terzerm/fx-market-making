@@ -23,13 +23,10 @@
  */
 package org.tools4j.fx.make.api;
 
-public enum ExecutionResult {
-	/**
-	 * Order is fully filled.
-	 */
-	FILLED, 
-	/**
-	 * Order is rejected.
-	 */
-	REJECTED;
+/**
+ * A market participant that is both ready to provide a stream of making
+ * orders (aka BID and OFFER prices) as well as accepting incoming orders.
+ */
+public interface MarketMaker extends OrderFlow, Dealer {
+	//no additional methods
 }
