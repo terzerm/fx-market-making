@@ -41,49 +41,50 @@ import org.tools4j.fx.make.api.Side;
  * The class is NOT thread safe.
  */
 public class PositionKeeper {
-	
+
 	private final Settings settings;
 	private final Map<Asset, AtomicLong> positionByAsset = new HashMap<>();
-	
+
 	public PositionKeeper(Settings settings) {
 		this.settings = Objects.requireNonNull(settings, "settings is null");
 	}
 
-	public long fillWithoutExceedingMax(Order order, boolean allowPartial) {
-		final AssetPair<?, ?> assetPair = order.getAssetPair();
+	public long getMaxPossibleFillWithoutExceedingMax(AssetPair<?, ?> assetPair, Side orderSide, double rate) {
 		final long baseMax = settings.getMaxAllowedPositionSize(assetPair.getBase());
 		final long termsMax = settings.getMaxAllowedPositionSize(assetPair.getTerms());
-		final long orderQty = order.getQuantity();
-		final double price = order.getPrice();
 		final long basePos = getPosition(assetPair.getBase());
 		final long termsPos = getPosition(assetPair.getTerms());
-		//opposite side for base because we fill the order, i.e. we take the opposite position
-		final double baseQty = getSignedQuantity(orderQty, order.getSide().opposite());
-		final double termsQty = getSignedQuantity(orderQty * price, order.getSide());
-		final double basePosNew = basePos + baseQty;
-		final double termsPosNew = termsPos + termsQty;
-		double ratio = 1;
-		if (Math.abs(basePosNew) > baseMax) {
-			ratio = Math.min(ratio, (baseMax - Math.abs(basePos)) / Math.abs(baseQty));
-		}
-		if (Math.abs(termsPosNew) > termsMax) {
-			ratio = Math.min(ratio, (termsMax - Math.abs(termsPos)) / Math.abs(termsQty));
-		}
-		final long baseChange = (long)(baseQty * ratio);
-		final long termsChange = (long)(termsQty * ratio);
-		if (Math.abs(baseChange) > 0 & Math.abs(termsChange) > 0 & (allowPartial | ratio == 1.0)) {
-			getOrCreatePosition(assetPair.getBase()).addAndGet(baseChange);
-			getOrCreatePosition(assetPair.getTerms()).addAndGet(termsChange);
-			return Math.abs(baseChange);
+		// opposite side for base because we fill the order, i.e. we take the
+		// opposite position
+		double baseQty = baseMax - getSignedQuantity(basePos, orderSide.opposite());
+		double termsQty = termsMax - getSignedQuantity(termsPos, orderSide);
+		return (long) (baseQty * rate <= termsQty ? baseQty : termsQty / rate);
+	}
+
+	public long fillWithoutExceedingMax(Order order, boolean allowPartial) {
+		final AssetPair<?, ?> assetPair = order.getAssetPair();
+		final long orderQty = order.getQuantity();
+		final long maxQty = getMaxPossibleFillWithoutExceedingMax(assetPair, order.getSide(), order.getPrice());
+		final long partialQty = Math.min(orderQty, maxQty);
+		if (allowPartial | orderQty == partialQty) {
+			// opposite side for base because we fill the order, i.e. we take
+			// the opposite position
+			final long baseQty = (long) getSignedQuantity(partialQty, order.getSide().opposite());
+			final long termsQty = (long) getSignedQuantity(partialQty * order.getPrice(), order.getSide());
+			if (baseQty != 0 & termsQty != 0) {
+				getOrCreatePosition(assetPair.getBase()).addAndGet(baseQty);
+				getOrCreatePosition(assetPair.getTerms()).addAndGet(termsQty);
+				return Math.abs(baseQty);
+			}
 		}
 		// no or not enough quantity left
 		return 0;
 	}
-	
+
 	private static double getSignedQuantity(double quantity, Side side) {
 		return side == Side.BUY ? quantity : -quantity;
 	}
-	
+
 	private AtomicLong getOrCreatePosition(Asset asset) {
 		AtomicLong position = positionByAsset.get(asset);
 		if (position == null) {
@@ -101,11 +102,11 @@ public class PositionKeeper {
 	public void resetPosition(Asset asset) {
 		positionByAsset.remove(asset);
 	}
-	
+
 	public void resetPositions() {
 		positionByAsset.clear();
 	}
-	
+
 	public double getValuation(Currency currency, MarketRates marketRates) {
 		double value = 0;
 		for (final Map.Entry<Asset, AtomicLong> e : positionByAsset.entrySet()) {
@@ -113,13 +114,13 @@ public class PositionKeeper {
 		}
 		return value;
 	}
-	
+
 	public double getValuation(Asset asset, Currency currency, MarketRates marketRates) {
 		Objects.requireNonNull(asset, "asset is null");
-		//rest of args checked in below call
+		// rest of args checked in below call
 		return getValuation(asset, getPosition(asset), currency, marketRates);
 	}
-	
+
 	private double getValuation(Asset asset, long position, Currency currency, MarketRates marketRates) {
 		Objects.requireNonNull(currency, "currency is null");
 		Objects.requireNonNull(marketRates, "marketRates is null");
