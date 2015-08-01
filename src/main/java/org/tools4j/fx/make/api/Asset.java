@@ -23,13 +23,21 @@
  */
 package org.tools4j.fx.make.api;
 
-public interface Settings {
+/**
+ * An asset represents a currency, an equity, a commodity or some other asset.
+ */
+public interface Asset {
 	/**
-	 * The maximum positions size for the specified asset, never negative
+	 * The name of this asset, must be unique within its {@link #type()}.
 	 * 
-	 * @param asset
-	 *            the asset of interest
-	 * @return the absolute max position size for the given asset, not negative
+	 * @return the asset name such as "AUD", "XAU", or "GOOG"
 	 */
-	long getMaxAllowedPositionSize(Asset asset);
+	String name();
+
+	/**
+	 * The asset type
+	 * 
+	 * @return the asset types
+	 */
+	AssetType type();
 }

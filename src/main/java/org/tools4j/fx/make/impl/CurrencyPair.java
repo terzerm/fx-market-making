@@ -21,15 +21,40 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.impl;
 
-public interface Settings {
-	/**
-	 * The maximum positions size for the specified asset, never negative
-	 * 
-	 * @param asset
-	 *            the asset of interest
-	 * @return the absolute max position size for the given asset, not negative
-	 */
-	long getMaxAllowedPositionSize(Asset asset);
+import org.tools4j.fx.make.api.Currency;
+
+public class CurrencyPair extends AbstractAssetPair<Currency, Currency>{
+
+	public CurrencyPair(Currency base, Currency terms) {
+		super(base, terms);
+	}
+	
+	public CurrencyPair(Currency nonUsdCurrency) {
+		super(toMarketConvention(nonUsdCurrency, true), toMarketConvention(nonUsdCurrency, true));
+	}
+
+	private static Currency toMarketConvention(Currency nonUsdCurrency, boolean base) {
+		final Currency baseCurrency = toMarketConvention(nonUsdCurrency);
+		return base ? baseCurrency : (baseCurrency == Currency.USD ? nonUsdCurrency : Currency.USD);
+	}
+
+	private static Currency toMarketConvention(Currency nonUsdCurrency) {
+		switch (nonUsdCurrency) {
+		case EUR://fallthrough
+		case GBP://fallthrough
+		case AUD:
+			return nonUsdCurrency;
+		case JPY://fallthrough
+		case CAD://fallthrough
+		case CHF:
+			return Currency.USD;
+		case USD:
+			throw new IllegalArgumentException("non-USD currency required: " + nonUsdCurrency);
+		default:
+			throw new IllegalArgumentException("unsupported currency: " + nonUsdCurrency);
+		}
+	}
+	
 }

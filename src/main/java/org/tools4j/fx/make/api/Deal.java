@@ -38,11 +38,11 @@ public interface Deal {
 	long getId();
 
 	/**
-	 * The symbol such as "AUD/USD"
+	 * The asset pair.
 	 * 
-	 * @return the symbol of the traded security
+	 * @return the traded asset pair
 	 */
-	String getSymbol();
+	AssetPair<?, ?> getAssetPair();
 
 	/**
 	 * The deal price, for instance mid price between the two involved order

@@ -25,6 +25,7 @@ package org.tools4j.fx.make.base;
 
 import java.util.Objects;
 
+import org.tools4j.fx.make.api.Asset;
 import org.tools4j.fx.make.api.Dealer;
 import org.tools4j.fx.make.api.Order;
 import org.tools4j.fx.make.api.Settings;
@@ -33,34 +34,32 @@ import org.tools4j.fx.make.api.Settings;
  * A {@link Dealer} accepting all orders as long as the position is within the
  * allowed max size.
  * <p>
- * The class is thread safe.
+ * The class is NOT thread safe.
  */
 public class PositionAwareDealer implements Dealer {
 	
-	private final Settings settings;
-	private final boolean allowPartial;
 	private final PositionKeeper positionKeeper;
+	private final boolean allowPartial;
 
 	public PositionAwareDealer(Settings settings, boolean allowPartial) {
-		this(settings, allowPartial, new PositionKeeper());
+		this(new PositionKeeper(settings), allowPartial);
 	}
-	public PositionAwareDealer(Settings settings, boolean allowPartial, PositionKeeper positionKeeper) {
-		this.settings = Objects.requireNonNull(settings, "settings is null");
+	public PositionAwareDealer(PositionKeeper positionKeeper, boolean allowPartial) {
+		this.positionKeeper= Objects.requireNonNull(positionKeeper, "positionKeeper is null");
 		this.allowPartial = allowPartial;
-		this.positionKeeper = Objects.requireNonNull(positionKeeper, "positionKeeper is null");
 	}
 
 	@Override
 	public long acceptOrReject(Order order) {
-		return positionKeeper.fillWithoutExceedingMax(order, allowPartial, settings.getMaxAllowedPositionSize());
+		return positionKeeper.fillWithoutExceedingMax(order, allowPartial);
 	}
 	
-	public long getPosition(String symbol) {
-		return positionKeeper.getPosition(symbol);
+	public long getPosition(Asset asset) {
+		return positionKeeper.getPosition(asset);
 	}
 
-	public void resetPosition(String symbol) {
-		positionKeeper.resetPosition(symbol);
+	public void resetPosition(Asset asset) {
+		positionKeeper.resetPosition(asset);
 	}
 
 	public void resetPositions() {

@@ -23,19 +23,26 @@
  */
 package org.tools4j.fx.make.impl;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+import org.tools4j.fx.make.api.Asset;
 import org.tools4j.fx.make.api.Settings;
 
 public class SettingsImpl implements Settings {
-	private final long maxAllowedPositionSize;
 
-	public SettingsImpl(long maxAllowedPositionSize) {
-		if (maxAllowedPositionSize < 0) {
-			throw new IllegalArgumentException("max allowed position size cannot be negative: " + maxAllowedPositionSize);
+	private final Map<Asset, Long> maxPositionSizeByAsset = new HashMap<>();
+
+	public void setMaxAllowedPositionSize(Asset asset, long maxPositionSize) {
+		Objects.requireNonNull(asset, "asset is null");
+		if (maxPositionSize < 0) {
+			throw new IllegalArgumentException("max position size is negative: " + maxPositionSize);
 		}
-		this.maxAllowedPositionSize = maxAllowedPositionSize;
+		maxPositionSizeByAsset.put(asset, maxPositionSize);
 	}
-
-	public long getMaxAllowedPositionSize() {
-		return maxAllowedPositionSize;
+	public long getMaxAllowedPositionSize(Asset asset) {
+		final Long masPositionSize = maxPositionSizeByAsset.get(asset);
+		return masPositionSize == null ? 0 : masPositionSize.longValue();
 	}
 }

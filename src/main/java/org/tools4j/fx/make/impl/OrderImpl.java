@@ -25,6 +25,7 @@ package org.tools4j.fx.make.impl;
 
 import java.util.Objects;
 
+import org.tools4j.fx.make.api.AssetPair;
 import org.tools4j.fx.make.api.Order;
 import org.tools4j.fx.make.api.Side;
 import org.tools4j.fx.make.util.StringUtil;
@@ -33,18 +34,18 @@ import org.tools4j.fx.make.util.StringUtil;
  * An immutable {@link Order}.
  */
 public class OrderImpl implements Order {
-	
+
 	private final long id = ID_GENERATOR.incrementAndGet();
-	private final String symbol;
+	private final AssetPair<?, ?> assetPair;
 	private final String party;
 	private final Side side;
 	private final double price;
 	private final long quantity;
 
-	public OrderImpl(String symbol, String party, Side side, double price, long quantity) {
-		this.side = Objects.requireNonNull(side, "side is null");
+	public OrderImpl(AssetPair<?, ?> assetPair, String party, Side side, double price, long quantity) {
+		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
 		this.party = Objects.requireNonNull(party, "party is null");
-		this.symbol = Objects.requireNonNull(symbol, "symbol is null");
+		this.side = Objects.requireNonNull(side, "side is null");
 		if (price < 0 | Double.isNaN(price)) {
 			throw new IllegalArgumentException("illegal price: " + price);
 		}
@@ -54,14 +55,16 @@ public class OrderImpl implements Order {
 		this.price = price;
 		this.quantity = quantity;
 	}
-	
+
 	public OrderImpl(Order order, long remainingQuantity) {
-		this(order.getSymbol(), order.getParty(), order.getSide(), order.getPrice(), validateRemainingQuantity(order, remainingQuantity));
+		this(order.getAssetPair(), order.getParty(), order.getSide(), order.getPrice(),
+				validateRemainingQuantity(order, remainingQuantity));
 	}
-	
+
 	private static long validateRemainingQuantity(Order order, long remainingQuantity) {
 		if (remainingQuantity > order.getQuantity()) {
-			throw new IllegalArgumentException("remaining quantity exceeds order quantity: " + remainingQuantity + " > " + order);
+			throw new IllegalArgumentException(
+					"remaining quantity exceeds order quantity: " + remainingQuantity + " > " + order);
 		}
 		return remainingQuantity;
 	}
@@ -72,8 +75,8 @@ public class OrderImpl implements Order {
 	}
 
 	@Override
-	public String getSymbol() {
-		return symbol;
+	public AssetPair<?, ?> getAssetPair() {
+		return assetPair;
 	}
 
 	@Override
@@ -102,8 +105,8 @@ public class OrderImpl implements Order {
 
 	@Override
 	public String toString() {
-		return "OrderImpl [id=" + id + ", symbol=" + symbol + ", party=" + party + ", side=" + side + ", price=" + price
-				+ ", quantity=" + quantity + "]";
+		return getClass().getSimpleName() + "{id=" + id + ", assetPair=" + assetPair + ", party=" + party + ", side="
+				+ side + ", price=" + price + ", quantity=" + quantity + "}";
 	}
-	
+
 }

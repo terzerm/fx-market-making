@@ -65,7 +65,7 @@ public enum OrderMatcher {
 	 * @return true if and only if a match is possible between the two orders
 	 */
 	public boolean isMatchPossible(Order order1, Order order2) {
-		if (!order1.getSymbol().equals(order2.getSymbol())) {
+		if (!order1.getAssetPair().equals(order2.getAssetPair())) {
 			return false;
 		}
 		if (this == FULL & order1.getQuantity() != order2.getQuantity()) {

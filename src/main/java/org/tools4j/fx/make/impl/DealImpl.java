@@ -25,15 +25,17 @@ package org.tools4j.fx.make.impl;
 
 import java.util.Objects;
 
+import org.tools4j.fx.make.api.AssetPair;
 import org.tools4j.fx.make.api.Deal;
 import org.tools4j.fx.make.api.Order;
+import org.tools4j.fx.make.api.OrderMatcher;
 import org.tools4j.fx.make.api.Side;
 import org.tools4j.fx.make.util.StringUtil;
 
 public class DealImpl implements Deal {
-	
+
 	private final long id = ID_GENERATOR.incrementAndGet();
-	private final String symbol;
+	private final AssetPair<?, ?> assetPair;
 	private final double price;
 	private final long quantity;
 	private final long buyOrderId;
@@ -41,8 +43,14 @@ public class DealImpl implements Deal {
 	private final long sellOrderId;
 	private final String sellParty;
 
-	public DealImpl(String symbol, double price, long quantity, long buyOrderId, String buyParty, long sellOrderId, String sellParty) {
-		this.symbol = Objects.requireNonNull(symbol, "symbol is null");
+	public DealImpl(AssetPair<?, ?> assetPair, double price, long quantity, long buyOrderId, String buyParty, long sellOrderId, String sellParty) {
+		if (quantity <= 0) {
+			throw new IllegalArgumentException("quantity must be positive: " + quantity);
+		}
+		if (price < 0 || Double.isNaN(price)) {
+			throw new IllegalArgumentException("invalid price: " + price);
+		}
+		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
 		this.price = price;
 		this.quantity = quantity;
 		this.buyOrderId = buyOrderId;
@@ -50,23 +58,20 @@ public class DealImpl implements Deal {
 		this.sellOrderId = sellOrderId;
 		this.sellParty = Objects.requireNonNull(sellParty, "sellParty is null");
 	}
-	
+
 	public DealImpl(double price, long quantity, Order order1, Order order2) {
-		final Order buyOrder = order1.getSide() == Side.BUY ? order1 : order2.getSide() == Side.BUY ? order2 : null;
-		final Order sellOrder = order1.getSide() == Side.SELL ? order1 : order2.getSide() == Side.SELL ? order2 : null;
-		if (buyOrder == null | sellOrder == null) {
-			throw new IllegalArgumentException("must be one BUY and one SELL order, but was: " + order1 + ", " + order2);
-		}
-		if (!buyOrder.getSymbol().equals(sellOrder.getSymbol())) {
-			throw new IllegalArgumentException("orders must have same symbol: " + order1 + ", " + order2);
-		}
 		if (quantity <= 0) {
 			throw new IllegalArgumentException("quantity must be positive: " + quantity);
 		}
-		if (quantity > order1.getQuantity() | quantity > order2.getQuantity()) {
-			throw new IllegalArgumentException("quantity must be no more than order quantity: " + quantity + ", order1=" + order1 + ", order2=" + order2);
+		if (price < 0 || Double.isNaN(price)) {
+			throw new IllegalArgumentException("invalid price: " + price);
 		}
-		this.symbol = Objects.requireNonNull(order1.getSymbol(), "order1.symbol is null");
+		if (!OrderMatcher.PARTIAL.isMatchPossible(order1, order2)) {
+			throw new IllegalArgumentException("order match is not possible: order1=" + order1 + "order2=" + order1);
+		}
+		final Order buyOrder = order1.getSide() == Side.BUY ? order1 : order2.getSide() == Side.BUY ? order2 : null;
+		final Order sellOrder = order1.getSide() == Side.SELL ? order1 : order2.getSide() == Side.SELL ? order2 : null;
+		this.assetPair = Objects.requireNonNull(order1.getAssetPair(), "order1.assetPair is null");
 		this.price = price;
 		this.quantity = quantity;
 		this.buyOrderId = buyOrder.getId();
@@ -81,8 +86,8 @@ public class DealImpl implements Deal {
 	}
 
 	@Override
-	public String getSymbol() {
-		return symbol;
+	public AssetPair<?, ?> getAssetPair() {
+		return assetPair;
 	}
 
 	@Override
@@ -121,9 +126,9 @@ public class DealImpl implements Deal {
 
 	@Override
 	public String toString() {
-		return "DealImpl [id=" + id + ", symbol=" + symbol + ", price=" + price + ", quantity=" + quantity
-				+ ", buyOrderId=" + buyOrderId + ", buyParty=" + buyParty + ", sellOrderId=" + sellOrderId
-				+ ", sellParty=" + sellParty + "]";
+		return getClass().getSimpleName() + "{id=" + id + ", assetPair=" + assetPair + ", price=" + price
+				+ ", quantity=" + quantity + ", buyOrderId=" + buyOrderId + ", buyParty=" + buyParty + ", sellOrderId="
+				+ sellOrderId + ", sellParty=" + sellParty + "}";
 	}
 
 }
