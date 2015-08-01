@@ -30,7 +30,8 @@ public enum Currency implements Asset {
 	JPY,
 	AUD,
 	CHF,
-	CAD;
+	CAD,
+	NZD;
 	
 	@Override
 	public AssetType type() {

@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.tools4j.fx.make.api.Asset;
 import org.tools4j.fx.make.api.AssetPair;
+import org.tools4j.fx.make.api.Currency;
 import org.tools4j.fx.make.api.Order;
 import org.tools4j.fx.make.api.Settings;
 import org.tools4j.fx.make.api.Side;
@@ -50,18 +51,27 @@ public class PositionKeeper {
 
 	public long fillWithoutExceedingMax(Order order, boolean allowPartial) {
 		final AssetPair<?, ?> assetPair = order.getAssetPair();
+		final long baseMax = settings.getMaxAllowedPositionSize(assetPair.getBase());
+		final long termsMax = settings.getMaxAllowedPositionSize(assetPair.getTerms());
 		final long orderQty = order.getQuantity();
+		final double price = order.getPrice();
 		final long basePos = getPosition(assetPair.getBase());
 		final long termsPos = getPosition(assetPair.getTerms());
 		//opposite side for base because we fill the order, i.e. we take the opposite position
-		final long baseQty = getSignedQuantity(orderQty, order.getSide().opposite());
-		final long termsQty = getSignedQuantity(orderQty, order.getSide());
-		final long baseCutOff = Math.max(0, Math.abs(basePos + baseQty) - settings.getMaxAllowedPositionSize(assetPair.getBase()));
-		final long termsCutOff = Math.max(0, Math.abs(termsPos + termsQty) - settings.getMaxAllowedPositionSize(assetPair.getTerms()));
-		final long cutOff = Math.max(baseCutOff, termsCutOff);
-		final long baseChange = baseQty - Long.signum(baseQty) * cutOff;
-		final long termsChange = termsQty - Long.signum(termsQty) * cutOff;
-		if (baseChange != 0 & (allowPartial | orderQty == Math.abs(baseChange))) {
+		final double baseQty = getSignedQuantity(orderQty, order.getSide().opposite());
+		final double termsQty = getSignedQuantity(orderQty * price, order.getSide());
+		final double basePosNew = basePos + baseQty;
+		final double termsPosNew = termsPos + termsQty;
+		double ratio = 1;
+		if (Math.abs(basePosNew) > baseMax) {
+			ratio = Math.min(ratio, (baseMax - Math.abs(basePos)) / Math.abs(baseQty));
+		}
+		if (Math.abs(termsPosNew) > termsMax) {
+			ratio = Math.min(ratio, (termsMax - Math.abs(termsPos)) / Math.abs(termsQty));
+		}
+		final long baseChange = (long)(baseQty * ratio);
+		final long termsChange = (long)(termsQty * ratio);
+		if (Math.abs(baseChange) > 0 & Math.abs(termsChange) > 0 & (allowPartial | ratio == 1.0)) {
 			getOrCreatePosition(assetPair.getBase()).addAndGet(baseChange);
 			getOrCreatePosition(assetPair.getTerms()).addAndGet(termsChange);
 			return Math.abs(baseChange);
@@ -70,7 +80,7 @@ public class PositionKeeper {
 		return 0;
 	}
 	
-	private static long getSignedQuantity(long quantity, Side side) {
+	private static double getSignedQuantity(double quantity, Side side) {
 		return side == Side.BUY ? quantity : -quantity;
 	}
 	
@@ -96,6 +106,30 @@ public class PositionKeeper {
 		positionByAsset.clear();
 	}
 	
+	public double getValuation(Currency currency, MarketRates marketRates) {
+		double value = 0;
+		for (final Map.Entry<Asset, AtomicLong> e : positionByAsset.entrySet()) {
+			value += getValuation(e.getKey(), e.getValue().longValue(), currency, marketRates);
+		}
+		return value;
+	}
+	
+	public double getValuation(Asset asset, Currency currency, MarketRates marketRates) {
+		Objects.requireNonNull(asset, "asset is null");
+		//rest of args checked in below call
+		return getValuation(asset, getPosition(asset), currency, marketRates);
+	}
+	
+	private double getValuation(Asset asset, long position, Currency currency, MarketRates marketRates) {
+		Objects.requireNonNull(currency, "currency is null");
+		Objects.requireNonNull(marketRates, "marketRates is null");
+		if (position == 0) {
+			return 0;
+		}
+		final double rate = marketRates.getRate(asset, currency);
+		return rate * position;
+	}
+
 	@Override
 	public String toString() {
 		return getClass().getSimpleName() + positionByAsset.toString();
