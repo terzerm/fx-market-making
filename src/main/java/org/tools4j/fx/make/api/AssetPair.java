@@ -23,13 +23,7 @@
  */
 package org.tools4j.fx.make.api;
 
-public interface Settings {
-	/**
-	 * The maximum positions size for the specified asset, never negative
-	 * 
-	 * @param asset
-	 *            the asset of interest
-	 * @return the absolute max position size for the given asset, not negative
-	 */
-	long getMaxAllowedPositionSize(Asset asset);
+public interface AssetPair<B extends Asset, T extends Asset> {
+	B getBase();
+	T getTerms();
 }

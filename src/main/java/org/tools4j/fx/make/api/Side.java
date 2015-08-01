@@ -35,4 +35,12 @@ public enum Side {
      * SELL side aka ASK or OFFER.
      */
     SELL;
+	
+	/**
+	 * Returns the opposite side.
+	 * @return the opposite side
+	 */
+	public Side opposite() {
+		return this == BUY ? SELL : BUY;
+	}
 }

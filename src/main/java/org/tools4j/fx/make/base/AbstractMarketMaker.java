@@ -29,7 +29,6 @@ import org.tools4j.fx.make.api.Dealer;
 import org.tools4j.fx.make.api.MarketMaker;
 import org.tools4j.fx.make.api.Order;
 import org.tools4j.fx.make.api.OrderMatcher;
-import org.tools4j.fx.make.api.Settings;
 
 /**
  * An abstract base implementation of {@link MarketMaker} accepting an order if
@@ -47,15 +46,17 @@ import org.tools4j.fx.make.api.Settings;
  * <p>
  * The implementation uses a {@link MatchingBookDealer} and a {@link PositionAwareDealer}
  * which need to agree to accept an order.
+ * <p>
+ * The class is NOT thread safe.
  */
 abstract public class AbstractMarketMaker implements MarketMaker {
 
 	private final MatchingBookDealer matchingBookDealer;
 	private final Dealer positionAwareMatchingBookDealer;
 
-	public AbstractMarketMaker(Settings settings, OrderMatcher orderMatcher, PositionKeeper positionKeeper) {
+	public AbstractMarketMaker(PositionKeeper positionKeeper, OrderMatcher orderMatcher) {
 		this.matchingBookDealer = new MatchingBookDealer(orderMatcher);
-		this.positionAwareMatchingBookDealer = new PositionAwareDealer(settings, orderMatcher == OrderMatcher.PARTIAL, positionKeeper)
+		this.positionAwareMatchingBookDealer = new PositionAwareDealer(positionKeeper, orderMatcher == OrderMatcher.PARTIAL)
 				.agreeWith(matchingBookDealer);
 	}
 

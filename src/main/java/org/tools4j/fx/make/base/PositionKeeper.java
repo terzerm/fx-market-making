@@ -23,71 +23,81 @@
  */
 package org.tools4j.fx.make.base;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
+import org.tools4j.fx.make.api.Asset;
+import org.tools4j.fx.make.api.AssetPair;
 import org.tools4j.fx.make.api.Order;
+import org.tools4j.fx.make.api.Settings;
 import org.tools4j.fx.make.api.Side;
 
 /**
  * Keeps track positions for several symbols.
  * <p>
- * The class is thread safe.
+ * The class is NOT thread safe.
  */
 public class PositionKeeper {
 	
-	private final ConcurrentMap<String, Long> positionBySymbol = new ConcurrentHashMap<>();
+	private final Settings settings;
+	private final Map<Asset, AtomicLong> positionByAsset = new HashMap<>();
+	
+	public PositionKeeper(Settings settings) {
+		this.settings = Objects.requireNonNull(settings, "settings is null");
+	}
 
-	public long fillWithoutExceedingMax(Order order, boolean allowPartial, long maxPositionSize) {
-		if (maxPositionSize < 0) {
-			throw new IllegalArgumentException("max position size is negative: " + maxPositionSize);
-		}
-		final String symbol = order.getSymbol();
-		final long orderQty = getSignedOrderQuantity(order);
-		long pos = getPosition(symbol);
-		long qty = allowPartial ? Math.min(orderQty, maxPositionSize - Math.abs(pos)) : orderQty;
-		while (qty != 0 && Math.abs(pos + qty) <= maxPositionSize) {
-			if (compareAndSet(symbol, pos, pos + qty)) {
-				return qty;
-			}
-			// concurrent update, try again
-			pos = getPosition(symbol);
-			if (allowPartial) {
-				qty = Math.min(orderQty, maxPositionSize - Math.abs(pos));
-			}
+	public long fillWithoutExceedingMax(Order order, boolean allowPartial) {
+		final AssetPair<?, ?> assetPair = order.getAssetPair();
+		final long orderQty = order.getQuantity();
+		final long basePos = getPosition(assetPair.getBase());
+		final long termsPos = getPosition(assetPair.getTerms());
+		//opposite side for base because we fill the order, i.e. we take the opposite position
+		final long baseQty = getSignedQuantity(orderQty, order.getSide().opposite());
+		final long termsQty = getSignedQuantity(orderQty, order.getSide());
+		final long baseCutOff = Math.max(0, Math.abs(basePos + baseQty) - settings.getMaxAllowedPositionSize(assetPair.getBase()));
+		final long termsCutOff = Math.max(0, Math.abs(termsPos + termsQty) - settings.getMaxAllowedPositionSize(assetPair.getTerms()));
+		final long cutOff = Math.max(baseCutOff, termsCutOff);
+		final long baseChange = baseQty - Long.signum(baseQty) * cutOff;
+		final long termsChange = termsQty - Long.signum(termsQty) * cutOff;
+		if (baseChange != 0 & (allowPartial | orderQty == Math.abs(baseChange))) {
+			getOrCreatePosition(assetPair.getBase()).addAndGet(baseChange);
+			getOrCreatePosition(assetPair.getTerms()).addAndGet(termsChange);
+			return Math.abs(baseChange);
 		}
 		// no or not enough quantity left
 		return 0;
 	}
 	
-	private boolean compareAndSet(String symbol, long expectedPosition, long newPosition) {
-		if (newPosition == 0) {
-			return positionBySymbol.remove(symbol, expectedPosition);
-		}
-		if (expectedPosition == 0) {
-			final Long old = positionBySymbol.putIfAbsent(symbol, newPosition);
-			if (old == null || old.longValue() == 0) {
-				return true;
-			}
-		}
-		return positionBySymbol.replace(symbol, expectedPosition, newPosition);
+	private static long getSignedQuantity(long quantity, Side side) {
+		return side == Side.BUY ? quantity : -quantity;
 	}
 	
-	private static long getSignedOrderQuantity(Order order) {
-		// if order is buying, we are selling, hence qty is negative
-		return order.getSide() == Side.BUY ? -order.getQuantity() : order.getQuantity();
+	private AtomicLong getOrCreatePosition(Asset asset) {
+		AtomicLong position = positionByAsset.get(asset);
+		if (position == null) {
+			position = new AtomicLong(0);
+			positionByAsset.put(asset, position);
+		}
+		return position;
 	}
-	
-	public long getPosition(String symbol) {
-		final Long position = positionBySymbol.get(symbol);
+
+	public long getPosition(Asset asset) {
+		final AtomicLong position = positionByAsset.get(asset);
 		return position == null ? 0 : position.longValue();
 	}
 
-	public void resetPosition(String symbol) {
-		positionBySymbol.remove(symbol);
+	public void resetPosition(Asset asset) {
+		positionByAsset.remove(asset);
 	}
 	
 	public void resetPositions() {
-		positionBySymbol.clear();
+		positionByAsset.clear();
+	}
+	
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + positionByAsset.toString();
 	}
 }

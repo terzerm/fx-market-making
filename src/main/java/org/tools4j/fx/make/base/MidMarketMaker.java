@@ -27,10 +27,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+import org.tools4j.fx.make.api.AssetPair;
 import org.tools4j.fx.make.api.MarketMaker;
 import org.tools4j.fx.make.api.Order;
 import org.tools4j.fx.make.api.OrderMatcher;
-import org.tools4j.fx.make.api.Settings;
 import org.tools4j.fx.make.api.Side;
 import org.tools4j.fx.make.impl.OrderImpl;
 
@@ -41,25 +41,27 @@ import org.tools4j.fx.make.impl.OrderImpl;
  * always two-sided with depth 1.
  * <p>
  * Accepts orders as defined by the {@link AbstractMarketMaker superclass}.
+ * <p>
+ * The class is NOT thread safe.
  */
 public class MidMarketMaker extends AbstractMarketMaker {
 
-	private final String symbol;
+	private final AssetPair<?, ?> assetPair;
 	private final String party;
 	private final double spread;
 	private final long quantity;
 	private volatile double lastBid = Double.NaN;
 	private volatile double lastAsk = Double.NaN;
 
-	public MidMarketMaker(Settings settings, OrderMatcher orderMatcher, PositionKeeper positionKeeper, String symbol, String party, double spread, long quantity) {
-		super(settings, orderMatcher, positionKeeper);
+	public MidMarketMaker(PositionKeeper positionKeeper, OrderMatcher orderMatcher, AssetPair<?, ?> assetPair, String party, double spread, long quantity) {
+		super(positionKeeper, orderMatcher);
 		if (spread < 0) {
 			throw new IllegalArgumentException("spread is negative: " + spread);
 		}
 		if (quantity < 0) {
 			throw new IllegalArgumentException("quantity is negative: " + quantity);
 		}
-		this.symbol = Objects.requireNonNull(symbol, "symbol is null");
+		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
 		this.party = Objects.requireNonNull(party, "party is null");
 		this.spread = spread;
 		this.quantity = quantity;
@@ -73,12 +75,12 @@ public class MidMarketMaker extends AbstractMarketMaker {
 
 	private Order createBuyOrder(double mid) {
 		final double price = Double.isNaN(mid) ? 0 : mid - spread / 2;
-		return new OrderImpl(symbol, party, Side.BUY, price, quantity);
+		return new OrderImpl(assetPair, party, Side.BUY, price, quantity);
 	}
 
 	private Order createSellOrder(double mid) {
 		final double price = Double.isNaN(mid) ? Double.POSITIVE_INFINITY : mid + spread / 2;
-		return new OrderImpl(symbol, party, Side.SELL, price, quantity);
+		return new OrderImpl(assetPair, party, Side.SELL, price, quantity);
 	}
 
 	public double getMid() {
