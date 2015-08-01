@@ -32,17 +32,47 @@ import org.tools4j.fx.make.api.Settings;
 
 public class SettingsImpl implements Settings {
 
-	private final Map<Asset, Long> maxPositionSizeByAsset = new HashMap<>();
+	private final Map<Asset, Long> maxPositionSizeByAsset;
 
-	public void setMaxAllowedPositionSize(Asset asset, long maxPositionSize) {
-		Objects.requireNonNull(asset, "asset is null");
-		if (maxPositionSize < 0) {
-			throw new IllegalArgumentException("max position size is negative: " + maxPositionSize);
-		}
-		maxPositionSizeByAsset.put(asset, maxPositionSize);
+	public SettingsImpl(Map<? extends Asset, Long> maxPositionSizeByAsset) {
+		this.maxPositionSizeByAsset = new HashMap<>(maxPositionSizeByAsset);
 	}
 	public long getMaxAllowedPositionSize(Asset asset) {
 		final Long masPositionSize = maxPositionSizeByAsset.get(asset);
 		return masPositionSize == null ? 0 : masPositionSize.longValue();
+	}
+	
+	@Override
+	public String toString() {
+		return getClass().getName() + "[maxPositionSizeByAsset=" + maxPositionSizeByAsset + "}"; 
+	}
+	
+	public static Builder builder() {
+		return new Builder();
+	}
+	
+	public static class Builder implements Settings.Builder {
+		
+		private final Map<Asset, Long> maxPositionSizeByAsset = new HashMap<>();
+
+		@Override
+		public Builder withMaxAllowedPositionSize(Asset asset, long maxPositionSize) {
+			Objects.requireNonNull(asset, "asset is null");
+			if (maxPositionSize < 0) {
+				throw new IllegalArgumentException("max position size is negative: " + maxPositionSize);
+			}
+			maxPositionSizeByAsset.put(asset, maxPositionSize);
+			return this;
+		}
+
+		@Override
+		public Settings build() {
+			return new SettingsImpl(maxPositionSizeByAsset);
+		}
+		
+		@Override
+		public String toString() {
+			return "Builder@" + build();
+		}
 	}
 }
