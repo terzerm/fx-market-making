@@ -32,15 +32,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.asset.CurrencyPair;
-import org.tools4j.fx.make.position.MarketRatesImpl;
 
 /**
- * Unit test for {@link MarketRatesImpl}
+ * Unit test for {@link MarketSnapshot} and {@link MarketSnapshotImpl}.
  */
 public class MarketRatesTest {
 	
 	private PairAndRate[] pairsAndRates;
-	private MarketRatesImpl marketRates;
+	private MarketSnapshot marketSnapshot;
 	
 	@Before
 	public void beforeEach() {
@@ -52,18 +51,18 @@ public class MarketRatesTest {
 				new PairAndRate(Currency.USD, Currency.JPY, 123.92),
 				new PairAndRate(Currency.USD, Currency.CAD, 1.3089),
 		};
-		//construct MarketRates
+		//construct MarketSnapshot
 		final Map<CurrencyPair, Double> rates = new LinkedHashMap<>();
 		for (final PairAndRate pairAndRate : pairsAndRates) {
 			rates.put(pairAndRate.currencyPair, pairAndRate.rate);
 		}
-		this.marketRates = new MarketRatesImpl(rates);
+		this.marketSnapshot = new MarketSnapshotImpl(rates);
 	}
 
 	@Test
 	public void shouldFindSelfRate() {
 		//given
-		final MarketRatesImpl emptyRates = new MarketRatesImpl(Collections.emptyMap());
+		final MarketSnapshotImpl emptyRates = new MarketSnapshotImpl(Collections.emptyMap());
 		
 		//when + then
 		for (final Currency currency : Currency.values()) {
@@ -72,7 +71,7 @@ public class MarketRatesTest {
 			//then
 			Assert.assertEquals("self-rate should be 1", 1.0, rate, 0.0);
 			//when
-			final double again = marketRates.getRate(currency, currency);
+			final double again = marketSnapshot.getRate(currency, currency);
 			//then
 			Assert.assertEquals("self-rate should be 1", 1.0, again, 0.0);
 		}
@@ -83,7 +82,7 @@ public class MarketRatesTest {
 		//given
 		final CurrencyPair audUsd = new CurrencyPair(Currency.AUD, Currency.USD);
 		final double rate = 0.7307;
-		final MarketRatesImpl rates = new MarketRatesImpl(Collections.singletonMap(audUsd, rate));
+		final MarketSnapshotImpl rates = new MarketSnapshotImpl(Collections.singletonMap(audUsd, rate));
 		
 		//when
 		final double direct = rates.getRate(Currency.AUD, Currency.USD);
@@ -100,7 +99,7 @@ public class MarketRatesTest {
 		//when + then
 		for (final PairAndRate pairAndRate : pairsAndRates) {
 			//when
-			final double direct = marketRates.getRate(pairAndRate.currencyPair.getBase(), pairAndRate.currencyPair.getTerms());
+			final double direct = marketSnapshot.getRate(pairAndRate.currencyPair.getBase(), pairAndRate.currencyPair.getTerms());
 			//then
 			Assert.assertEquals("unexpected direct rate for " + pairAndRate.currencyPair , pairAndRate.rate, direct, 0.0);
 		}
@@ -111,7 +110,7 @@ public class MarketRatesTest {
 		//when + then
 		for (final PairAndRate pairAndRate : pairsAndRates) {
 			//when
-			final double indirect = marketRates.getRate(pairAndRate.currencyPair.getTerms(), pairAndRate.currencyPair.getBase());
+			final double indirect = marketSnapshot.getRate(pairAndRate.currencyPair.getTerms(), pairAndRate.currencyPair.getBase());
 			//then
 			Assert.assertEquals("unexpected indirect rate for " + pairAndRate.currencyPair , 1/pairAndRate.rate, indirect, 0.0);
 		}
@@ -120,26 +119,26 @@ public class MarketRatesTest {
 	@Test(expected = IllegalArgumentException.class)
 	public void shouldThrowExceptionIfRateNotFound() {
 		//when
-		marketRates.getRate(Currency.USD, Currency.CHF);
+		marketSnapshot.getRate(Currency.USD, Currency.CHF);
 		//then: exception
 	}
 
 	@Test(expected = NullPointerException.class)
 	public void shouldThrowExceptionForNullAsset1() {
 		//when
-		marketRates.getRate(null, Currency.USD);
+		marketSnapshot.getRate(null, Currency.USD);
 		//then: exception
 	}
 	@Test(expected = NullPointerException.class)
 	public void shouldThrowExceptionForNullAsset2() {
 		//when
-		marketRates.getRate(Currency.USD, null);
+		marketSnapshot.getRate(Currency.USD, null);
 		//then: exception
 	}
 	@Test(expected = NullPointerException.class)
 	public void shouldThrowExceptionForNullRateInRatesMap() {
 		//when
-		new MarketRatesImpl(Collections.singletonMap(new CurrencyPair(Currency.AUD, Currency.USD), (Double)null));
+		new MarketSnapshotImpl(Collections.singletonMap(new CurrencyPair(Currency.AUD, Currency.USD), (Double)null));
 		//then: exception
 	}
 

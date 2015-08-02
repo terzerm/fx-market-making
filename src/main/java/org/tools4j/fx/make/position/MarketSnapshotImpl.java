@@ -33,14 +33,21 @@ import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.asset.CurrencyPair;
 
-public class MarketRatesImpl implements MarketRates {
-	
+/**
+ * Immutable implementation of {@link MarketSnapshot}. A {@link Builder} can be used to
+ * construct a market snaphot.
+ * <p>
+ * This class thread safe.
+ */
+public class MarketSnapshotImpl implements MarketSnapshot {
+
 	private final Map<Asset, Map<Asset, Double>> marketRates = new HashMap<>();
-	
-	public MarketRatesImpl(Map<? extends AssetPair<?, ?>, Double> marketRates) {
+
+	public MarketSnapshotImpl(Map<? extends AssetPair<?, ?>, Double> marketRates) {
 		for (final Map.Entry<? extends AssetPair<?, ?>, Double> e : marketRates.entrySet()) {
 			final Asset base = Objects.requireNonNull(e.getKey().getBase(), "assetPair.base is null for " + e.getKey());
-			final Asset terms = Objects.requireNonNull(e.getKey().getTerms(), "assetPair.terms is null for " + e.getKey());
+			final Asset terms = Objects.requireNonNull(e.getKey().getTerms(),
+					"assetPair.terms is null for " + e.getKey());
 			final Double rate = Objects.requireNonNull(e.getValue(), "rate value is null for " + e.getKey());
 			Map<Asset, Double> rates = this.marketRates.get(base);
 			if (rates == null) {
@@ -50,7 +57,7 @@ public class MarketRatesImpl implements MarketRates {
 			rates.put(terms, rate);
 		}
 	}
-	
+
 	public double getRate(Asset from, Asset to) {
 		Objects.requireNonNull(from, "from is null");
 		Objects.requireNonNull(to, "to is null");
@@ -67,29 +74,32 @@ public class MarketRatesImpl implements MarketRates {
 		}
 		throw new IllegalArgumentException("no market rate present for: " + from + "/" + to);
 	}
-	
+
 	private Double getRateOrNull(Asset from, Asset to) {
 		final Map<Asset, Double> rates = marketRates.get(from);
 		return rates != null ? rates.get(to) : null;
 	}
-	
+
 	public static Builder builder() {
 		return new Builder();
 	}
-	public static class Builder {
+
+	public static class Builder implements MarketSnapshot.Builder {
 		private final Map<AssetPair<?, ?>, Double> marketRates = new LinkedHashMap<>();
-		
-		public Builder withRate(AssetPair<?,?> pair, double rate) {
+
+		public Builder withRate(AssetPair<?, ?> pair, double rate) {
 			marketRates.put(pair, rate);
 			return this;
 		}
+
 		public Builder withRate(Currency base, Currency terms, double rate) {
 			return withRate(new CurrencyPair(base, terms), rate);
 		}
-		
-		public MarketRatesImpl build() {
-			return new MarketRatesImpl(marketRates);
+
+		public MarketSnapshotImpl build() {
+			return new MarketSnapshotImpl(marketRates);
 		}
+
 		@Override
 		public String toString() {
 			return "Builder@" + build();

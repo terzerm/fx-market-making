@@ -30,7 +30,7 @@ import org.tools4j.fx.make.asset.Currency;
 /**
  * Represents a snapshot of market rates.
  */
-public interface MarketRates {
+public interface MarketSnapshot {
 	
 	double getRate(Asset from, Asset to);
 	
@@ -38,6 +38,6 @@ public interface MarketRates {
 		Builder withRate(AssetPair<?,?> pair, double rate);
 		Builder withRate(Currency base, Currency terms, double rate);
 		
-		MarketRates build();
+		MarketSnapshot build();
 	}
 }

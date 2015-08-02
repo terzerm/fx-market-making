@@ -34,7 +34,7 @@ import org.tools4j.fx.make.execution.OrderImpl;
 import org.tools4j.fx.make.execution.Side;
 
 /**
- * Unit test for {@link PositionKeeperImpl}
+ * Unit test for {@link Valuator} and {@link ValuatorImpl}.
  */
 public class ValuatorTest {
 	
@@ -66,7 +66,7 @@ public class ValuatorTest {
 		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
 
 		//given: market rates
-		final MarketRatesImpl marketRates = MarketRatesImpl.builder().build();
+		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder().build();
 		
 		//when: 
 		final double valAud = positionKeeper.getValuator(Currency.AUD).getValuation(Currency.AUD, marketRates);
@@ -90,7 +90,7 @@ public class ValuatorTest {
 		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
 
 		//given: market rates
-		final MarketRatesImpl marketRates = MarketRatesImpl.builder()
+		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder()
 				.withRate(audUsd, 0.76)
 				.withRate(eurUsd, 1.22)
 				.withRate(eurAud, 1.26)
@@ -121,7 +121,7 @@ public class ValuatorTest {
 		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
 
 		//given: market rates
-		final MarketRatesImpl marketRates = MarketRatesImpl.builder()
+		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder()
 				.withRate(audUsd, 0.76)
 				.withRate(eurUsd, 1.22)
 				.withRate(eurAud, 1.26)

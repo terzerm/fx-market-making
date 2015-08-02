@@ -30,22 +30,20 @@ import org.tools4j.fx.make.asset.Currency;
 
 /**
  * Implements {@link Valuator}.
- * <p>
- * The class is NOT thread safe.
  */
 public class ValuatorImpl implements Valuator {
 
 	private final Currency valuationCurrency;
-	private final PositionKeeper positionKeeper;
+	private final PositionLookup positionLookup;
 
-	public ValuatorImpl(Currency valuationCurrency, PositionKeeper positionKeeper) {
+	public ValuatorImpl(Currency valuationCurrency, PositionLookup positionLookup) {
 		this.valuationCurrency = Objects.requireNonNull(valuationCurrency, "valuationCurrency is null");
-		this.positionKeeper = Objects.requireNonNull(positionKeeper, "positionKeeper is null");
+		this.positionLookup = Objects.requireNonNull(positionLookup, "positionLookup is null");
 	}
 	
 	@Override
-	public PositionKeeper getPositionKeeper() {
-		return positionKeeper;
+	public PositionLookup getPositionLookup() {
+		return positionLookup;
 	}
 	
 	@Override
@@ -54,28 +52,28 @@ public class ValuatorImpl implements Valuator {
 	}
 
 	@Override
-	public double getValuation(MarketRates marketRates) {
+	public double getValuation(MarketSnapshot marketSnapshot) {
 		double value = 0;
-		for (final Asset asset : positionKeeper.getPositionAssets()) {
-			value += getValuation(asset, marketRates);
+		for (final Asset asset : positionLookup.getPositionAssets()) {
+			value += getValuation(asset, marketSnapshot);
 		}
 		return value;
 	}
 
 	@Override
-	public double getValuation(Asset asset, MarketRates marketRates) {
+	public double getValuation(Asset asset, MarketSnapshot marketSnapshot) {
 		Objects.requireNonNull(asset, "asset is null");
-		Objects.requireNonNull(marketRates, "marketRates is null");
-		final long position = positionKeeper.getPosition(asset);
+		Objects.requireNonNull(marketSnapshot, "marketSnapshot is null");
+		final long position = positionLookup.getPosition(asset);
 		if (position == 0) {
 			return 0;
 		}
-		final double rate = marketRates.getRate(asset, valuationCurrency);
+		final double rate = marketSnapshot.getRate(asset, valuationCurrency);
 		return rate * position;
 	}
 
 	@Override
 	public String toString() {
-		return getClass().getSimpleName() + "{valuationCurrency=" + valuationCurrency + ", positionKeeper=" + positionKeeper + "}";
+		return getClass().getSimpleName() + "{valuationCurrency=" + valuationCurrency + ", positionLookup=" + positionLookup + "}";
 	}
 }

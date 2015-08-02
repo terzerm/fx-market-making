@@ -23,30 +23,19 @@
  */
 package org.tools4j.fx.make.position;
 
-import java.util.Set;
-
 import org.tools4j.fx.make.asset.Asset;
-import org.tools4j.fx.make.asset.AssetPair;
-import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.execution.Order;
-import org.tools4j.fx.make.execution.Side;
 
 /**
- * Keeps track positions for several {@link Asset}s.
+ * Keeps track positions for several {@link Asset}s. Adds
+ * modifying methods to {@link PositionLookup}.
  */
-public interface PositionKeeper {
-
-	long getMaxPossibleFillWithoutExceedingMax(AssetPair<?, ?> assetPair, Side orderSide, double rate);
+public interface PositionKeeper extends PositionLookup {
 
 	long fillWithoutExceedingMax(Order order, boolean allowPartial);
-
-	Set<Asset> getPositionAssets();
-	
-	long getPosition(Asset asset);
 
 	void resetPosition(Asset asset);
 
 	void resetPositions();
 	
-	Valuator getValuator(Currency valuationCurrency);
 }
