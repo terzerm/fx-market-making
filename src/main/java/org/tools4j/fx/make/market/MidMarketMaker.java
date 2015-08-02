@@ -21,67 +21,66 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.base;
+package org.tools4j.fx.make.market;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 
 import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
-import org.tools4j.fx.make.execution.OrderImpl;
-import org.tools4j.fx.make.execution.OrderMatcher;
 import org.tools4j.fx.make.execution.Side;
-import org.tools4j.fx.make.market.MarketMaker;
-import org.tools4j.fx.make.position.PositionKeeperImpl;
+import org.tools4j.fx.make.position.PositionLookup;
 
 /**
  * A simple {@link MarketMaker} for a single symbol, party and a constant
  * quantity. The mid market maker starts making with zero BID and infinite OFFER
- * and then always offers mid rate plus some constant spread. The makes are
- * always two-sided with depth 1.
+ * and then always offers mid rate plus some constant spread.
  * <p>
- * Accepts orders as defined by the {@link AbstractMarketMaker superclass}.
+ * If the position allows the makes are one level bid/ask. If the position
+ * constrains the order making bid and offered quantities are adjusted and one
+ * or both sides are omitted in the making activity if necessary.
  * <p>
  * The class is NOT thread safe.
  */
-public class MidMarketMaker extends AbstractMarketMaker {
+public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 
-	private final AssetPair<?, ?> assetPair;
 	private final String party;
 	private final double spread;
-	private final long quantity;
+	private final long maxQuantity;
 	private volatile double lastBid = Double.NaN;
 	private volatile double lastAsk = Double.NaN;
 
-	public MidMarketMaker(PositionKeeperImpl positionKeeper, OrderMatcher orderMatcher, AssetPair<?, ?> assetPair, String party, double spread, long quantity) {
-		super(positionKeeper, orderMatcher);
+	public MidMarketMaker(PositionLookup positionLookup, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity) {
+		super(positionLookup, assetPair);
 		if (spread < 0) {
 			throw new IllegalArgumentException("spread is negative: " + spread);
 		}
-		if (quantity < 0) {
-			throw new IllegalArgumentException("quantity is negative: " + quantity);
+		if (maxQuantity < 0) {
+			throw new IllegalArgumentException("maxQuantity is negative: " + maxQuantity);
 		}
-		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
 		this.party = Objects.requireNonNull(party, "party is null");
 		this.spread = spread;
-		this.quantity = quantity;
+		this.maxQuantity = maxQuantity;
 	}
 
 	@Override
-	protected List<Order> nextOrdersInternal() {
+	protected String nextParty(Side side) {
+		return party;
+	}
+	
+	@Override
+	protected long nextQuantity(Side side, String party) {
+		return maxQuantity;
+	}
+	
+	@Override
+	protected double nextPrice(Side side, String party, long desiredQuantity) {
 		final double mid = getMid();
-		return Arrays.asList(createBuyOrder(mid), createSellOrder(mid));
-	}
-
-	private Order createBuyOrder(double mid) {
-		final double price = Double.isNaN(mid) ? 0 : mid - spread / 2;
-		return new OrderImpl(assetPair, party, Side.BUY, price, quantity);
-	}
-
-	private Order createSellOrder(double mid) {
-		final double price = Double.isNaN(mid) ? Double.POSITIVE_INFINITY : mid + spread / 2;
-		return new OrderImpl(assetPair, party, Side.SELL, price, quantity);
+		if (side == Side.BUY) {
+			return Double.isNaN(mid) ? 0 : mid - spread / 2;
+		} else {
+			return Double.isNaN(mid) ? Double.POSITIVE_INFINITY : mid + spread / 2;
+		}
 	}
 
 	public double getMid() {
@@ -89,13 +88,18 @@ public class MidMarketMaker extends AbstractMarketMaker {
 	}
 
 	@Override
-	public long acceptOrReject(Order order) {
+	public void onOrder(Order order) {
 		if (order.getSide() == Side.BUY) {
 			lastBid = order.getPrice();
 		} else {
 			lastAsk = order.getPrice();
 		}
-		return super.acceptOrReject(order);
+	}
+
+	@Override
+	public void onDeal(Deal deal) {
+		lastBid = deal.getPrice();
+		lastAsk = deal.getPrice();
 	}
 
 }

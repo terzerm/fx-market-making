@@ -27,9 +27,27 @@ import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
 
 /**
- * Someone who is looking what's on on the market.
+ * Someone who is looking what's on in the market.
  */
 public interface MarketObserver {
+	/**
+	 * An order has been placed in the market. Only unmatched orders are seen
+	 * that do not directly lead to deals. Orders crossing the spread usually
+	 * lead to a match and hence to a deal.
+	 * 
+	 * @param order
+	 *            the order that was placed in the market, may include own
+	 *            orders if the observer is a {@link MarketMaker}
+	 */
 	void onOrder(Order order);
+
+	/**
+	 * A deal has happened in the market, that is, a successful order match took
+	 * place. The deal can be an own deal (i.e. where buy or sell party is
+	 * oneself) or the deal of two foreign parties.
+	 * 
+	 * @param deal
+	 *            the deal that took place in the market
+	 */
 	void onDeal(Deal deal);
 }

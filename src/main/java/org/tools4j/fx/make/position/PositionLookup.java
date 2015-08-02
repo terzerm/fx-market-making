@@ -21,23 +21,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.market;
+package org.tools4j.fx.make.position;
 
 import java.util.Set;
 
+import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.asset.Currency;
+import org.tools4j.fx.make.execution.Side;
 
 /**
- * A market maker is an {@link OrderFlow} as he provides a stream of making
- * orders (aka BID and OFFER prices); he is also a {@link MarketObserver} as he
- * usually bases the market making activity on observed orders and deals.
+ * Information lookup for positions of multiple {@link Asset}s.
  */
-public interface MarketMaker extends OrderFlow, MarketObserver {
-	/**
-	 * Returns a set with asset-pairs this maker is willing to make a market
-	 * for.
-	 * 
-	 * @return the set of active asset-pairs for this maker
-	 */
-	Set<? extends AssetPair<?, ?>> getAssetPairs();
+public interface PositionLookup {
+
+	long getMaxPossibleFillWithoutExceedingMax(AssetPair<?, ?> assetPair, Side orderSide, double rate);
+
+	Set<Asset> getPositionAssets();
+	
+	long getPosition(Asset asset);
+
+	Valuator getValuator(Currency valuationCurrency);
 }

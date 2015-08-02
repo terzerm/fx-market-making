@@ -21,23 +21,45 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.market;
+package org.tools4j.fx.make.position;
 
+import java.util.Objects;
 import java.util.Set;
 
+import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.asset.Currency;
+import org.tools4j.fx.make.execution.Side;
 
 /**
- * A market maker is an {@link OrderFlow} as he provides a stream of making
- * orders (aka BID and OFFER prices); he is also a {@link MarketObserver} as he
- * usually bases the market making activity on observed orders and deals.
+ * Implementation of {@link PositionLookup} around  a {@link PositionKeeper}
+ * to hide and herewith protect the modifying methods from unauthorized use.
  */
-public interface MarketMaker extends OrderFlow, MarketObserver {
-	/**
-	 * Returns a set with asset-pairs this maker is willing to make a market
-	 * for.
-	 * 
-	 * @return the set of active asset-pairs for this maker
-	 */
-	Set<? extends AssetPair<?, ?>> getAssetPairs();
+public class PositionLookupImpl implements PositionLookup {
+
+	private final PositionKeeper positionKeeper;
+	
+	public PositionLookupImpl(PositionKeeper positionKeeper) {
+		this.positionKeeper = Objects.requireNonNull(positionKeeper, "positionKeeper is null");
+	}
+	@Override
+	public long getMaxPossibleFillWithoutExceedingMax(AssetPair<?, ?> assetPair, Side orderSide, double rate) {
+		return positionKeeper.getMaxPossibleFillWithoutExceedingMax(assetPair, orderSide, rate);
+	}
+
+	@Override
+	public Set<Asset> getPositionAssets() {
+		return positionKeeper.getPositionAssets();
+	}
+
+	@Override
+	public long getPosition(Asset asset) {
+		return positionKeeper.getPosition(asset);
+	}
+
+	@Override
+	public Valuator getValuator(Currency valuationCurrency) {
+		return positionKeeper.getValuator(valuationCurrency);
+	}
+
 }

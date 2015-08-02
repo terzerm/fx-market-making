@@ -21,49 +21,38 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.base;
+package org.tools4j.fx.make.market;
 
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
-import org.tools4j.fx.make.asset.Asset;
-import org.tools4j.fx.make.config.Settings;
 import org.tools4j.fx.make.execution.Order;
-import org.tools4j.fx.make.market.Dealer;
-import org.tools4j.fx.make.position.PositionKeeperImpl;
 
 /**
- * A {@link Dealer} accepting all orders as long as the position is within the
- * allowed max size.
- * <p>
- * The class is NOT thread safe.
+ * A {@link OrderFlow} composite of multiple underlying flows. Provides an easy
+ * way to construct a single multiply asset-pair flow from single-asset-pair
+ * flows.
  */
-public class PositionAwareDealer implements Dealer {
-	
-	private final PositionKeeperImpl positionKeeper;
-	private final boolean allowPartial;
+public class CompositeOrderFlow implements OrderFlow {
 
-	public PositionAwareDealer(Settings settings, boolean allowPartial) {
-		this(new PositionKeeperImpl(settings), allowPartial);
+	protected final OrderFlow[] orderFlows;
+
+	public CompositeOrderFlow(OrderFlow... orderFlows) {
+		this.orderFlows = Arrays.copyOf(orderFlows, orderFlows.length);
 	}
-	public PositionAwareDealer(PositionKeeperImpl positionKeeper, boolean allowPartial) {
-		this.positionKeeper= Objects.requireNonNull(positionKeeper, "positionKeeper is null");
-		this.allowPartial = allowPartial;
+
+	public CompositeOrderFlow(Collection<? extends OrderFlow> orderFlows) {
+		this(orderFlows.toArray(new OrderFlow[orderFlows.size()]));
 	}
 
 	@Override
-	public long acceptOrReject(Order order) {
-		return positionKeeper.fillWithoutExceedingMax(order, allowPartial);
-	}
-	
-	public long getPosition(Asset asset) {
-		return positionKeeper.getPosition(asset);
-	}
-
-	public void resetPosition(Asset asset) {
-		positionKeeper.resetPosition(asset);
-	}
-
-	public void resetPositions() {
-		positionKeeper.resetPositions();
+	public List<Order> nextOrders() {
+		final ArrayList<Order> orders = new ArrayList<>();
+		for (final OrderFlow orderFlow : orderFlows) {
+			orders.addAll(orderFlow.nextOrders());
+		}
+		return orders;
 	}
 }

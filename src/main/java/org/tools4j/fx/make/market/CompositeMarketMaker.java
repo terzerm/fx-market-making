@@ -23,21 +23,50 @@
  */
 package org.tools4j.fx.make.market;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.execution.Deal;
+import org.tools4j.fx.make.execution.Order;
 
 /**
- * A market maker is an {@link OrderFlow} as he provides a stream of making
- * orders (aka BID and OFFER prices); he is also a {@link MarketObserver} as he
- * usually bases the market making activity on observed orders and deals.
+ * A {@link MarketMaker} composite of multiple underlying makers. Provides an
+ * easy way to support multiply asset-pairs by simply composing
+ * single-asset-pair makers.
  */
-public interface MarketMaker extends OrderFlow, MarketObserver {
-	/**
-	 * Returns a set with asset-pairs this maker is willing to make a market
-	 * for.
-	 * 
-	 * @return the set of active asset-pairs for this maker
-	 */
-	Set<? extends AssetPair<?, ?>> getAssetPairs();
+public class CompositeMarketMaker extends CompositeOrderFlow implements MarketMaker {
+
+	public CompositeMarketMaker(MarketMaker... marketMakers) {
+		super(marketMakers);
+	}
+
+	public CompositeMarketMaker(Collection<? extends MarketMaker> marketMakers) {
+		this(marketMakers.toArray(new MarketMaker[marketMakers.size()]));
+	}
+
+	@Override
+	public Set<? extends AssetPair<?, ?>> getAssetPairs() {
+		final Set<AssetPair<?, ?>> assetPairs = new LinkedHashSet<>();
+		for (final MarketMaker marketMaker : (MarketMaker[]) orderFlows) {
+			assetPairs.addAll(marketMaker.getAssetPairs());
+		}
+		return assetPairs;
+	}
+
+	@Override
+	public void onOrder(Order order) {
+		for (final MarketMaker marketMaker : (MarketMaker[]) orderFlows) {
+			marketMaker.onOrder(order);
+		}
+	}
+
+	@Override
+	public void onDeal(Deal deal) {
+		for (final MarketMaker marketMaker : (MarketMaker[]) orderFlows) {
+			marketMaker.onDeal(deal);
+		}
+	}
+
 }
