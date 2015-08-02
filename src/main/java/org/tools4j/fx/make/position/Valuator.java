@@ -21,49 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.impl;
+package org.tools4j.fx.make.position;
 
-import org.tools4j.fx.make.api.Asset;
-import org.tools4j.fx.make.api.Currency;
+import org.tools4j.fx.make.asset.Asset;
+import org.tools4j.fx.make.asset.Currency;
 
 /**
- * Returns the symbol for an asset price, such as "GOOG/USD" reading that Google
- * shares are quoted in USD.
- *
- * @param <A>
- *            the asset type
+ * Valuates a position or all positions of a {@link PositionKeeper} using a snapshot
+ * of current {@link MarketRatesImpl} to perform the valuation. A valuator has a
+ * designated {@link #getValuationCurrency() valuation currency}.
  */
-public class AssetPriceSymbol<A extends Asset> extends AbstractAssetPair<A, Currency> {
+public interface Valuator {
+	
+	PositionKeeper getPositionKeeper();
 
-	/**
-	 * Constructor with asset and quoting currency.
-	 * 
-	 * @param asset
-	 *            the priced asset
-	 * @param currency
-	 *            the pricing currency
-	 */
-	public AssetPriceSymbol(A asset, Currency currency) {
-		super(asset, currency);
-	}
+	Currency getValuationCurrency();
 
-	/**
-	 * Returns the asset delegating to {@link #getBase()}.
-	 * 
-	 * @return the base asset
-	 */
-	public A getAsset() {
-		return getBase();
-	}
+	double getValuation(MarketRates marketRates);
 
-	/**
-	 * Returns the currency in which prices for the asset are quoted. Delegates
-	 * to {@link #getTerms()}.
-	 * 
-	 * @return the terms currency
-	 */
-	public Currency getCurrency() {
-		return super.getTerms();
-	}
-
+	double getValuation(Asset asset, MarketRates marketRates);
 }

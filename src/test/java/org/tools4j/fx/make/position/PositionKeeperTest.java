@@ -21,20 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.base;
+package org.tools4j.fx.make.position;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.tools4j.fx.make.api.Currency;
-import org.tools4j.fx.make.api.Settings;
-import org.tools4j.fx.make.api.Side;
-import org.tools4j.fx.make.impl.CurrencyPair;
-import org.tools4j.fx.make.impl.OrderImpl;
-import org.tools4j.fx.make.impl.SettingsImpl;
+import org.tools4j.fx.make.asset.Currency;
+import org.tools4j.fx.make.asset.CurrencyPair;
+import org.tools4j.fx.make.config.Settings;
+import org.tools4j.fx.make.config.SettingsImpl;
+import org.tools4j.fx.make.execution.OrderImpl;
+import org.tools4j.fx.make.execution.Side;
 
 /**
- * Unit test for {@link PositionKeeper}
+ * Unit test for {@link PositionKeeper} and {@link PositionKeeperImpl}.
  */
 public class PositionKeeperTest {
 	
@@ -52,7 +52,7 @@ public class PositionKeeperTest {
 				.withMaxAllowedPositionSize(Currency.USD, 1500000)
 				.withMaxAllowedPositionSize(Currency.EUR, 1500000)
 				.build();
-		positionKeeper = new PositionKeeper(settings);
+		positionKeeper = new PositionKeeperImpl(settings);
 	}
 
 	@Test
@@ -202,52 +202,5 @@ public class PositionKeeperTest {
 		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
 		Assert.assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD));
 		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
-	}
-	
-	@Test
-	public void shouldValuate() {
-		//given: position
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(audUsd, party, Side.SELL, 0.75, 1000000), true);
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(eurAud, party, Side.SELL, 1.25, 1000000), true);
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(eurUsd, party, Side.SELL, 1.20, 1000000), true);
-		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD));
-		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
-
-		//given: market rates
-		final MarketRates marketRates = MarketRates.builder()
-				.withRate(audUsd, 0.76)
-				.withRate(eurUsd, 1.22)
-				.withRate(eurAud, 1.26)
-				.build();
-		
-		//when: DIRECT
-		final double valAud = positionKeeper.getValuation(Currency.AUD, Currency.AUD, marketRates);
-		final double valUsd = positionKeeper.getValuation(Currency.USD, Currency.USD, marketRates);
-		final double valEur = positionKeeper.getValuation(Currency.EUR, Currency.EUR, marketRates);
-		//then: DIRECT
-		Assert.assertEquals("unexpected AUD position valuation", -250000, valAud, 0);
-		Assert.assertEquals("unexpected USD position valuation", -1350000, valUsd, 0);
-		Assert.assertEquals("unexpected EUR position valuation", 1500000, valEur, 0);
-		//when: USD
-		final double valAudInUsd = positionKeeper.getValuation(Currency.AUD, Currency.USD, marketRates);
-		final double valUsdInUsd = positionKeeper.getValuation(Currency.USD, Currency.USD, marketRates);
-		final double valEurInUsd = positionKeeper.getValuation(Currency.EUR, Currency.USD, marketRates);
-		final double totalUsd = positionKeeper.getValuation(Currency.USD, marketRates);
-		//then: USD
-		Assert.assertEquals("unexpected AUD position valuation", -250000*.76, valAudInUsd, 0);
-		Assert.assertEquals("unexpected USD position valuation", -1350000, valUsdInUsd, 0);
-		Assert.assertEquals("unexpected EUR position valuation", 1500000*1.22, valEurInUsd, 0);
-		Assert.assertEquals("unexpected total position valuation", 290000, totalUsd, 0);
-		//when: EUR
-		final double valAudInEur = positionKeeper.getValuation(Currency.AUD, Currency.EUR, marketRates);
-		final double valUsdInEur = positionKeeper.getValuation(Currency.USD, Currency.EUR, marketRates);
-		final double valEurInEur = positionKeeper.getValuation(Currency.EUR, Currency.EUR, marketRates);
-		final double totalEur = positionKeeper.getValuation(Currency.EUR, marketRates);
-		//then: EUR
-		Assert.assertEquals("unexpected AUD position valuation", -250000/1.26, valAudInEur, 0);
-		Assert.assertEquals("unexpected USD position valuation", -1350000/1.22, valUsdInEur, 0);
-		Assert.assertEquals("unexpected EUR position valuation", 1500000, valEurInEur, 0);
-		Assert.assertEquals("unexpected total position valuation", 195029.92, totalEur, 1e-2);
 	}
 }

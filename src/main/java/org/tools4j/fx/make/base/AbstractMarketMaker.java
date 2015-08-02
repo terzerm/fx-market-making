@@ -25,10 +25,11 @@ package org.tools4j.fx.make.base;
 
 import java.util.List;
 
-import org.tools4j.fx.make.api.Dealer;
-import org.tools4j.fx.make.api.MarketMaker;
-import org.tools4j.fx.make.api.Order;
-import org.tools4j.fx.make.api.OrderMatcher;
+import org.tools4j.fx.make.execution.Order;
+import org.tools4j.fx.make.execution.OrderMatcher;
+import org.tools4j.fx.make.market.Dealer;
+import org.tools4j.fx.make.market.MarketMaker;
+import org.tools4j.fx.make.position.PositionKeeperImpl;
 
 /**
  * An abstract base implementation of {@link MarketMaker} accepting an order if
@@ -54,7 +55,7 @@ abstract public class AbstractMarketMaker implements MarketMaker {
 	private final MatchingBookDealer matchingBookDealer;
 	private final Dealer positionAwareMatchingBookDealer;
 
-	public AbstractMarketMaker(PositionKeeper positionKeeper, OrderMatcher orderMatcher) {
+	public AbstractMarketMaker(PositionKeeperImpl positionKeeper, OrderMatcher orderMatcher) {
 		this.matchingBookDealer = new MatchingBookDealer(orderMatcher);
 		this.positionAwareMatchingBookDealer = new PositionAwareDealer(positionKeeper, orderMatcher == OrderMatcher.PARTIAL)
 				.agreeWith(matchingBookDealer);

@@ -21,20 +21,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.execution;
 
-public enum Currency implements Asset {
-	USD,
-	EUR,
-	GBP,
-	JPY,
-	AUD,
-	CHF,
-	CAD,
-	NZD;
-	
+import java.util.Comparator;
+
+/**
+ * Compares order prices in descending (BUY) and ascending (SELL) order.
+ * Can be used to construct an order book sorted by price.
+ */
+public enum OrderPriceComparator implements Comparator<Order> {
+	BUY, SELL;
 	@Override
-	public AssetType type() {
-		return AssetType.CURRENCY;
+	public int compare(Order o1, Order o2) {
+		final int cmp = Double.compare(o1.getPrice(), o2.getPrice());
+		return this == BUY ? -cmp : cmp;
 	}
 }

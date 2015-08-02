@@ -21,10 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.position;
 
-public enum AssetType {
-	CURRENCY,
-	EQUITY,
-	COMMODITY;
+import org.tools4j.fx.make.asset.Asset;
+import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.asset.Currency;
+
+/**
+ * Represents a snapshot of market rates.
+ */
+public interface MarketRates {
+	
+	double getRate(Asset from, Asset to);
+	
+	interface Builder {
+		Builder withRate(AssetPair<?,?> pair, double rate);
+		Builder withRate(Currency base, Currency terms, double rate);
+		
+		MarketRates build();
+	}
 }

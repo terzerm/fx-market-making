@@ -21,24 +21,26 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
-
-import java.util.List;
+package org.tools4j.fx.make.execution;
 
 /**
- * Order flow is a stream of orders. This can be a market maker or an input flow
- * of client orders; it may also refer to the stream of bid/ask prices from any
- * price source.
+ * The side of an order.
  */
-public interface OrderFlow {
+public enum Side {
 	/**
-	 * Retrieve the next orders for one particular instant in time.
-	 * <p>
-	 * The returned orders need not be sorted by price and can be on either
-	 * side. An empty list means that there are no orders at the specified time.
-	 * Returning null is illegal.
-	 * 
-	 * @return a list of orders, maybe empty but never null
+	 * BUY side aka BID.
 	 */
-	List<Order> nextOrders();
+    BUY, 
+    /**
+     * SELL side aka ASK or OFFER.
+     */
+    SELL;
+	
+	/**
+	 * Returns the opposite side.
+	 * @return the opposite side
+	 */
+	public Side opposite() {
+		return this == BUY ? SELL : BUY;
+	}
 }

@@ -21,23 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.market;
+
+import org.tools4j.fx.make.execution.Deal;
+import org.tools4j.fx.make.execution.Order;
 
 /**
- * An asset represents a currency, an equity, a commodity or some other asset.
+ * Someone who is looking what's on on the market.
  */
-public interface Asset {
-	/**
-	 * The name of this asset, must be unique within its {@link #type()}.
-	 * 
-	 * @return the asset name such as "AUD", "XAU", or "GOOG"
-	 */
-	String name();
-
-	/**
-	 * The asset type
-	 * 
-	 * @return the asset types
-	 */
-	AssetType type();
+public interface MarketObserver {
+	void onOrder(Order order);
+	void onDeal(Deal deal);
 }

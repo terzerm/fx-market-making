@@ -29,10 +29,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.tools4j.fx.make.api.Dealer;
-import org.tools4j.fx.make.api.Order;
-import org.tools4j.fx.make.api.OrderMatcher;
-import org.tools4j.fx.make.impl.OrderImpl;
+import org.tools4j.fx.make.execution.Order;
+import org.tools4j.fx.make.execution.OrderImpl;
+import org.tools4j.fx.make.execution.OrderMatcher;
+import org.tools4j.fx.make.market.Dealer;
 
 /**
  * A {@link Dealer} who accepts an {@link Order} if it matches any of the orders

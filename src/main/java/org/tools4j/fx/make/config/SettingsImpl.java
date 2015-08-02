@@ -21,14 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.impl;
+package org.tools4j.fx.make.config;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import org.tools4j.fx.make.api.Asset;
-import org.tools4j.fx.make.api.Settings;
+import org.tools4j.fx.make.asset.Asset;
 
 public class SettingsImpl implements Settings {
 

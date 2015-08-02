@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.execution;
 
 /**
  * Matches two orders if a match is possible.

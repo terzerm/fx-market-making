@@ -27,12 +27,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import org.tools4j.fx.make.api.AssetPair;
-import org.tools4j.fx.make.api.MarketMaker;
-import org.tools4j.fx.make.api.Order;
-import org.tools4j.fx.make.api.OrderMatcher;
-import org.tools4j.fx.make.api.Side;
-import org.tools4j.fx.make.impl.OrderImpl;
+import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.execution.Order;
+import org.tools4j.fx.make.execution.OrderImpl;
+import org.tools4j.fx.make.execution.OrderMatcher;
+import org.tools4j.fx.make.execution.Side;
+import org.tools4j.fx.make.market.MarketMaker;
+import org.tools4j.fx.make.position.PositionKeeperImpl;
 
 /**
  * A simple {@link MarketMaker} for a single symbol, party and a constant
@@ -53,7 +54,7 @@ public class MidMarketMaker extends AbstractMarketMaker {
 	private volatile double lastBid = Double.NaN;
 	private volatile double lastAsk = Double.NaN;
 
-	public MidMarketMaker(PositionKeeper positionKeeper, OrderMatcher orderMatcher, AssetPair<?, ?> assetPair, String party, double spread, long quantity) {
+	public MidMarketMaker(PositionKeeperImpl positionKeeper, OrderMatcher orderMatcher, AssetPair<?, ?> assetPair, String party, double spread, long quantity) {
 		super(positionKeeper, orderMatcher);
 		if (spread < 0) {
 			throw new IllegalArgumentException("spread is negative: " + spread);

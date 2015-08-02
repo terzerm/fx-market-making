@@ -21,7 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.market;
+
+import org.tools4j.fx.make.execution.Order;
 
 /**
  * A market participant that is willing to accept and sometimes reject orders.
