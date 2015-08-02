@@ -21,19 +21,48 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.config;
 
-import java.util.Comparator;
+import org.tools4j.fx.make.asset.Asset;
 
 /**
- * Compares order prices in descending (BUY) and ascending (SELL) order.
- * Can be used to construct an order book sorted by price.
+ * Immutable settings.
  */
-public enum OrderPriceComparator implements Comparator<Order> {
-	BUY, SELL;
-	@Override
-	public int compare(Order o1, Order o2) {
-		final int cmp = Double.compare(o1.getPrice(), o2.getPrice());
-		return this == BUY ? -cmp : cmp;
+public interface Settings {
+	/**
+	 * The maximum positions size for the specified asset, never negative
+	 * 
+	 * @param asset
+	 *            the asset of interest
+	 * @return the absolute max position size for the given asset, not negative
+	 */
+	long getMaxAllowedPositionSize(Asset asset);
+
+	/**
+	 * Builder for {@link Settings} which are immutable;
+	 */
+	interface Builder {
+		/**
+		 * The maximum positions size for the specified asset, never negative
+		 * 
+		 * @param asset
+		 *            the asset of interest
+		 * @param maxPositionSize
+		 *            the absolute max position size for the given asset, not
+		 *            negative
+		 * @throws IllegalArgumentException
+		 *             if size is negative
+		 * @throws NullPointerException
+		 *             if asset is null
+		 * @return this builder for chained method invocation
+		 */
+		Builder withMaxAllowedPositionSize(Asset asset, long maxPositionSize);
+
+		/**
+		 * Returns a new immutable settings instance.
+		 * 
+		 * @return a new immutable settings instance.
+		 */
+		Settings build();
 	}
 }

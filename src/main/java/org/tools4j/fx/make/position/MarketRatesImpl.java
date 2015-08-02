@@ -21,23 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.base;
+package org.tools4j.fx.make.position;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import org.tools4j.fx.make.api.Asset;
-import org.tools4j.fx.make.api.AssetPair;
-import org.tools4j.fx.make.api.Currency;
-import org.tools4j.fx.make.impl.CurrencyPair;
+import org.tools4j.fx.make.asset.Asset;
+import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.asset.Currency;
+import org.tools4j.fx.make.asset.CurrencyPair;
 
-public class MarketRates {
+public class MarketRatesImpl implements MarketRates {
 	
 	private final Map<Asset, Map<Asset, Double>> marketRates = new HashMap<>();
 	
-	public MarketRates(Map<? extends AssetPair<?, ?>, Double> marketRates) {
+	public MarketRatesImpl(Map<? extends AssetPair<?, ?>, Double> marketRates) {
 		for (final Map.Entry<? extends AssetPair<?, ?>, Double> e : marketRates.entrySet()) {
 			final Asset base = Objects.requireNonNull(e.getKey().getBase(), "assetPair.base is null for " + e.getKey());
 			final Asset terms = Objects.requireNonNull(e.getKey().getTerms(), "assetPair.terms is null for " + e.getKey());
@@ -87,8 +87,8 @@ public class MarketRates {
 			return withRate(new CurrencyPair(base, terms), rate);
 		}
 		
-		public MarketRates build() {
-			return new MarketRates(marketRates);
+		public MarketRatesImpl build() {
+			return new MarketRatesImpl(marketRates);
 		}
 		@Override
 		public String toString() {

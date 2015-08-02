@@ -21,46 +21,46 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.asset;
 
 /**
- * Immutable settings.
+ * Returns the symbol for an asset price, such as "GOOG/USD" reading that Google
+ * shares are quoted in USD.
+ *
+ * @param <A>
+ *            the asset type
  */
-public interface Settings {
+public class AssetPriceSymbol<A extends Asset> extends AbstractAssetPair<A, Currency> {
+
 	/**
-	 * The maximum positions size for the specified asset, never negative
+	 * Constructor with asset and quoting currency.
 	 * 
 	 * @param asset
-	 *            the asset of interest
-	 * @return the absolute max position size for the given asset, not negative
+	 *            the priced asset
+	 * @param currency
+	 *            the pricing currency
 	 */
-	long getMaxAllowedPositionSize(Asset asset);
+	public AssetPriceSymbol(A asset, Currency currency) {
+		super(asset, currency);
+	}
 
 	/**
-	 * Builder for {@link Settings} which are immutable;
+	 * Returns the asset delegating to {@link #getBase()}.
+	 * 
+	 * @return the base asset
 	 */
-	interface Builder {
-		/**
-		 * The maximum positions size for the specified asset, never negative
-		 * 
-		 * @param asset
-		 *            the asset of interest
-		 * @param maxPositionSize
-		 *            the absolute max position size for the given asset, not
-		 *            negative
-		 * @throws IllegalArgumentException
-		 *             if size is negative
-		 * @throws NullPointerException
-		 *             if asset is null
-		 * @return this builder for chained method invocation
-		 */
-		Builder withMaxAllowedPositionSize(Asset asset, long maxPositionSize);
-
-		/**
-		 * Returns a new immutable settings instance.
-		 * 
-		 * @return a new immutable settings instance.
-		 */
-		Settings build();
+	public A getAsset() {
+		return getBase();
 	}
+
+	/**
+	 * Returns the currency in which prices for the asset are quoted. Delegates
+	 * to {@link #getTerms()}.
+	 * 
+	 * @return the terms currency
+	 */
+	public Currency getCurrency() {
+		return super.getTerms();
+	}
+
 }

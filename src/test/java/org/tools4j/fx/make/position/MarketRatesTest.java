@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.base;
+package org.tools4j.fx.make.position;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -30,16 +30,17 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.tools4j.fx.make.api.Currency;
-import org.tools4j.fx.make.impl.CurrencyPair;
+import org.tools4j.fx.make.asset.Currency;
+import org.tools4j.fx.make.asset.CurrencyPair;
+import org.tools4j.fx.make.position.MarketRatesImpl;
 
 /**
- * Unit test for {@link MarketRates}
+ * Unit test for {@link MarketRatesImpl}
  */
 public class MarketRatesTest {
 	
 	private PairAndRate[] pairsAndRates;
-	private MarketRates marketRates;
+	private MarketRatesImpl marketRates;
 	
 	@Before
 	public void beforeEach() {
@@ -56,13 +57,13 @@ public class MarketRatesTest {
 		for (final PairAndRate pairAndRate : pairsAndRates) {
 			rates.put(pairAndRate.currencyPair, pairAndRate.rate);
 		}
-		this.marketRates = new MarketRates(rates);
+		this.marketRates = new MarketRatesImpl(rates);
 	}
 
 	@Test
 	public void shouldFindSelfRate() {
 		//given
-		final MarketRates emptyRates = new MarketRates(Collections.emptyMap());
+		final MarketRatesImpl emptyRates = new MarketRatesImpl(Collections.emptyMap());
 		
 		//when + then
 		for (final Currency currency : Currency.values()) {
@@ -82,7 +83,7 @@ public class MarketRatesTest {
 		//given
 		final CurrencyPair audUsd = new CurrencyPair(Currency.AUD, Currency.USD);
 		final double rate = 0.7307;
-		final MarketRates rates = new MarketRates(Collections.singletonMap(audUsd, rate));
+		final MarketRatesImpl rates = new MarketRatesImpl(Collections.singletonMap(audUsd, rate));
 		
 		//when
 		final double direct = rates.getRate(Currency.AUD, Currency.USD);
@@ -138,7 +139,7 @@ public class MarketRatesTest {
 	@Test(expected = NullPointerException.class)
 	public void shouldThrowExceptionForNullRateInRatesMap() {
 		//when
-		new MarketRates(Collections.singletonMap(new CurrencyPair(Currency.AUD, Currency.USD), (Double)null));
+		new MarketRatesImpl(Collections.singletonMap(new CurrencyPair(Currency.AUD, Currency.USD), (Double)null));
 		//then: exception
 	}
 

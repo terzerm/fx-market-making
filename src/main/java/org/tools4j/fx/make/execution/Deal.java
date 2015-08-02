@@ -21,18 +21,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.execution;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.tools4j.fx.make.asset.AssetPair;
+
 /**
- * An order. All members return non-null values.
+ * A done deal, that is, a match or partial of two orders agreed by the involved
+ * parties.
  */
-public interface Order {
+public interface Deal {
 	/**
-	 * The order ID unique among all orders even across different parties.
+	 * The deal ID unique among all deals.
 	 * 
-	 * @return unique order ID
+	 * @return unique deal ID
 	 */
 	long getId();
 
@@ -44,41 +47,57 @@ public interface Order {
 	AssetPair<?, ?> getAssetPair();
 
 	/**
-	 * The party behind this order
+	 * The deal price, for instance mid price between the two involved order
+	 * prices.
 	 * 
-	 * @return the issuing party
-	 */
-	String getParty();
-
-	/**
-	 * Returns the side, never null.
-	 * 
-	 * @return the order side
-	 */
-	Side getSide();
-
-	/**
-	 * The order price
-	 * 
-	 * @return the price of this order
+	 * @return the price of this deal
 	 */
 	double getPrice();
 
 	/**
-	 * The quantity of the order, non-negative
+	 * The quantity of the deal, non-negative and no more than any of the
+	 * involved orders.
 	 * 
 	 * @return the quantity or amount, not negative
 	 */
 	long getQuantity();
-	
+
 	/**
-	 * Returns a string of the form: BUY:1.2M@1.24637
-	 * @return a short string with side, quantity and price
+	 * Returns the order ID of the BUY side order.
+	 * 
+	 * @return the buy-side order ID
+	 */
+	long getBuyOrderId();
+
+	/**
+	 * Returns the party behind the BUY side order.
+	 * 
+	 * @return the buy-side party
+	 */
+	String getBuyParty();
+
+	/**
+	 * Returns the order ID of the SELL side order.
+	 * 
+	 * @return the sell-side order ID
+	 */
+	long getSellOrderId();
+
+	/**
+	 * Returns the party behind the SELL side order.
+	 * 
+	 * @return the sell-side party
+	 */
+	String getSellParty();
+
+	/**
+	 * Returns a string of the form: 1.2M@1.24637
+	 * @return a short string with quantity and price
 	 */
 	String toShortString();
-	
+
 	/**
-	 * Generator for unique order ID's.
+	 * Generator for unique deal ID's.
 	 */
 	AtomicLong ID_GENERATOR = new AtomicLong(System.currentTimeMillis());
 }

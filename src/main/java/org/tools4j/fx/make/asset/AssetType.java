@@ -21,12 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.api;
+package org.tools4j.fx.make.asset;
 
-/**
- * A market participant that is both ready to provide a stream of making
- * orders (aka BID and OFFER prices) as well as accepting incoming orders.
- */
-public interface MarketMaker extends OrderFlow, Dealer {
-	//no additional methods
+public enum AssetType {
+	CURRENCY,
+	EQUITY,
+	COMMODITY;
 }

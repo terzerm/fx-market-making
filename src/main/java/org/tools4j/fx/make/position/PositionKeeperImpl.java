@@ -21,34 +21,37 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.base;
+package org.tools4j.fx.make.position;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.tools4j.fx.make.api.Asset;
-import org.tools4j.fx.make.api.AssetPair;
-import org.tools4j.fx.make.api.Currency;
-import org.tools4j.fx.make.api.Order;
-import org.tools4j.fx.make.api.Settings;
-import org.tools4j.fx.make.api.Side;
+import org.tools4j.fx.make.asset.Asset;
+import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.asset.Currency;
+import org.tools4j.fx.make.config.Settings;
+import org.tools4j.fx.make.execution.Order;
+import org.tools4j.fx.make.execution.Side;
 
 /**
  * Keeps track positions for several symbols.
  * <p>
  * The class is NOT thread safe.
  */
-public class PositionKeeper {
+public class PositionKeeperImpl implements PositionKeeper {
 
 	private final Settings settings;
 	private final Map<Asset, AtomicLong> positionByAsset = new HashMap<>();
 
-	public PositionKeeper(Settings settings) {
+	public PositionKeeperImpl(Settings settings) {
 		this.settings = Objects.requireNonNull(settings, "settings is null");
 	}
 
+	@Override
 	public long getMaxPossibleFillWithoutExceedingMax(AssetPair<?, ?> assetPair, Side orderSide, double rate) {
 		final long baseMax = settings.getMaxAllowedPositionSize(assetPair.getBase());
 		final long termsMax = settings.getMaxAllowedPositionSize(assetPair.getTerms());
@@ -61,6 +64,7 @@ public class PositionKeeper {
 		return (long) (baseQty * rate <= termsQty ? baseQty : termsQty / rate);
 	}
 
+	@Override
 	public long fillWithoutExceedingMax(Order order, boolean allowPartial) {
 		final AssetPair<?, ?> assetPair = order.getAssetPair();
 		final long orderQty = order.getQuantity();
@@ -94,41 +98,30 @@ public class PositionKeeper {
 		return position;
 	}
 
+	@Override
+	public Set<Asset> getPositionAssets() {
+		return Collections.unmodifiableSet(positionByAsset.keySet());
+	}
+
+	@Override
 	public long getPosition(Asset asset) {
 		final AtomicLong position = positionByAsset.get(asset);
 		return position == null ? 0 : position.longValue();
 	}
 
+	@Override
 	public void resetPosition(Asset asset) {
 		positionByAsset.remove(asset);
 	}
 
+	@Override
 	public void resetPositions() {
 		positionByAsset.clear();
 	}
-
-	public double getValuation(Currency currency, MarketRates marketRates) {
-		double value = 0;
-		for (final Map.Entry<Asset, AtomicLong> e : positionByAsset.entrySet()) {
-			value += getValuation(e.getKey(), e.getValue().longValue(), currency, marketRates);
-		}
-		return value;
-	}
-
-	public double getValuation(Asset asset, Currency currency, MarketRates marketRates) {
-		Objects.requireNonNull(asset, "asset is null");
-		// rest of args checked in below call
-		return getValuation(asset, getPosition(asset), currency, marketRates);
-	}
-
-	private double getValuation(Asset asset, long position, Currency currency, MarketRates marketRates) {
-		Objects.requireNonNull(currency, "currency is null");
-		Objects.requireNonNull(marketRates, "marketRates is null");
-		if (position == 0) {
-			return 0;
-		}
-		final double rate = marketRates.getRate(asset, currency);
-		return rate * position;
+	
+	@Override
+	public Valuator getValuator(Currency valuationCurrency) {
+		return new ValuatorImpl(valuationCurrency, this);
 	}
 
 	@Override

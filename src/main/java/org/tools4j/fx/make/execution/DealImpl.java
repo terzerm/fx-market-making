@@ -21,15 +21,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.impl;
+package org.tools4j.fx.make.execution;
 
 import java.util.Objects;
 
-import org.tools4j.fx.make.api.AssetPair;
-import org.tools4j.fx.make.api.Deal;
-import org.tools4j.fx.make.api.Order;
-import org.tools4j.fx.make.api.OrderMatcher;
-import org.tools4j.fx.make.api.Side;
+import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.util.StringUtil;
 
 public class DealImpl implements Deal {

@@ -21,53 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.impl;
+package org.tools4j.fx.make.asset;
 
-import java.util.Objects;
-
-import org.tools4j.fx.make.api.Asset;
-import org.tools4j.fx.make.api.AssetPair;
-
-abstract public class AbstractAssetPair<B extends Asset, T extends Asset> implements AssetPair<B, T> {
-	private final B base;
-	private final T terms;
-
-	public AbstractAssetPair(B base, T terms) {
-		this.base = Objects.requireNonNull(base, "base is null");
-		this.terms = Objects.requireNonNull(terms, "terms is null");
-		if (base.equals(terms)) {
-			throw new IllegalArgumentException("base equals terms: " + base + "/" + terms);
-		}
-	}
-
-	public B getBase() {
-		return base;
-	}
-
-	public T getTerms() {
-		return terms;
-	}
-
-	@Override
-	public String toString() {
-		return getBase() + "/" + getTerms();
-	}
-
-	@Override
-	public int hashCode() {
-		return 31*base.hashCode() + terms.hashCode();
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		final AbstractAssetPair<?, ?> other = (AbstractAssetPair<?, ?>) obj;
-		return base.equals(other.base) && terms.equals(other.terms);
-	}
-
+public interface AssetPair<B extends Asset, T extends Asset> {
+	B getBase();
+	T getTerms();
 }

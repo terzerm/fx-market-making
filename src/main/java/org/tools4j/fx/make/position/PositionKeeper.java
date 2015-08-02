@@ -21,49 +21,32 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.base;
+package org.tools4j.fx.make.position;
 
-import java.util.Objects;
+import java.util.Set;
 
 import org.tools4j.fx.make.asset.Asset;
-import org.tools4j.fx.make.config.Settings;
+import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.execution.Order;
-import org.tools4j.fx.make.market.Dealer;
-import org.tools4j.fx.make.position.PositionKeeperImpl;
+import org.tools4j.fx.make.execution.Side;
 
 /**
- * A {@link Dealer} accepting all orders as long as the position is within the
- * allowed max size.
- * <p>
- * The class is NOT thread safe.
+ * Keeps track positions for several {@link Asset}s.
  */
-public class PositionAwareDealer implements Dealer {
+public interface PositionKeeper {
+
+	long getMaxPossibleFillWithoutExceedingMax(AssetPair<?, ?> assetPair, Side orderSide, double rate);
+
+	long fillWithoutExceedingMax(Order order, boolean allowPartial);
+
+	Set<Asset> getPositionAssets();
 	
-	private final PositionKeeperImpl positionKeeper;
-	private final boolean allowPartial;
+	long getPosition(Asset asset);
 
-	public PositionAwareDealer(Settings settings, boolean allowPartial) {
-		this(new PositionKeeperImpl(settings), allowPartial);
-	}
-	public PositionAwareDealer(PositionKeeperImpl positionKeeper, boolean allowPartial) {
-		this.positionKeeper= Objects.requireNonNull(positionKeeper, "positionKeeper is null");
-		this.allowPartial = allowPartial;
-	}
+	void resetPosition(Asset asset);
 
-	@Override
-	public long acceptOrReject(Order order) {
-		return positionKeeper.fillWithoutExceedingMax(order, allowPartial);
-	}
+	void resetPositions();
 	
-	public long getPosition(Asset asset) {
-		return positionKeeper.getPosition(asset);
-	}
-
-	public void resetPosition(Asset asset) {
-		positionKeeper.resetPosition(asset);
-	}
-
-	public void resetPositions() {
-		positionKeeper.resetPositions();
-	}
+	Valuator getValuator(Currency valuationCurrency);
 }
