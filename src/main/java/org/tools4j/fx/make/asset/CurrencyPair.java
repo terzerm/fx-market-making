@@ -23,36 +23,48 @@
  */
 package org.tools4j.fx.make.asset;
 
-public class CurrencyPair extends AbstractAssetPair<Currency, Currency>{
+import static java.util.Arrays.asList;
+import static org.tools4j.fx.make.asset.Currency.AUD;
+import static org.tools4j.fx.make.asset.Currency.BWP;
+import static org.tools4j.fx.make.asset.Currency.EUR;
+import static org.tools4j.fx.make.asset.Currency.FJD;
+import static org.tools4j.fx.make.asset.Currency.GBP;
+import static org.tools4j.fx.make.asset.Currency.NZD;
+import static org.tools4j.fx.make.asset.Currency.PGK;
+import static org.tools4j.fx.make.asset.Currency.SBD;
+import static org.tools4j.fx.make.asset.Currency.TOP;
+import static org.tools4j.fx.make.asset.Currency.USD;
+import static org.tools4j.fx.make.asset.Currency.WST;
+
+import java.util.List;
+
+public class CurrencyPair extends AbstractAssetPair<Currency, Currency> {
+
+	private static final List<Currency> PRECEDENCE = asList(EUR, GBP, AUD, NZD, FJD, TOP, WST, PGK, BWP, SBD, USD);
 
 	public CurrencyPair(Currency base, Currency terms) {
 		super(base, terms);
 	}
-	
-	public CurrencyPair(Currency nonUsdCurrency) {
-		super(toMarketConvention(nonUsdCurrency, true), toMarketConvention(nonUsdCurrency, true));
+	public static CurrencyPair toMarketConvention(Currency currency) {
+		return toMarketConvention(currency, Currency.USD);
 	}
-
-	private static Currency toMarketConvention(Currency nonUsdCurrency, boolean base) {
-		final Currency baseCurrency = toMarketConvention(nonUsdCurrency);
-		return base ? baseCurrency : (baseCurrency == Currency.USD ? nonUsdCurrency : Currency.USD);
-	}
-
-	private static Currency toMarketConvention(Currency nonUsdCurrency) {
-		switch (nonUsdCurrency) {
-		case EUR://fallthrough
-		case GBP://fallthrough
-		case AUD:
-			return nonUsdCurrency;
-		case JPY://fallthrough
-		case CAD://fallthrough
-		case CHF:
-			return Currency.USD;
-		case USD:
-			throw new IllegalArgumentException("non-USD currency required: " + nonUsdCurrency);
-		default:
-			throw new IllegalArgumentException("unsupported currency: " + nonUsdCurrency);
+	public static CurrencyPair toMarketConvention(Currency currency1, Currency currency2) {
+		final int index1 = precedence(currency1);
+		final int index2 = precedence(currency2);
+		if (index1 >= 0 | index2 >= 0) {
+			if (index1 < index2) {
+				return new CurrencyPair(currency1, currency2);
+			}
+			if (index1 > index2) {
+				return new CurrencyPair(currency2, currency1);
+			}
 		}
+		throw new IllegalArgumentException("market convention undefined for: " + currency1 + "/" + currency2);
 	}
-	
+
+	private static int precedence(Currency currency) {
+		final int index = PRECEDENCE.indexOf(currency);
+		return index >= 0 ? index : Integer.MAX_VALUE;
+	}
+
 }
