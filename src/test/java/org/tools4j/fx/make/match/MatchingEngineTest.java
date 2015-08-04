@@ -50,7 +50,9 @@ public class MatchingEngineTest {
 		// given
 		final List<Order> orders = new ArrayList<>();
 		final OrderFlow orderFlow = new ListOrderFlow(orders);
-		final MatchingEngine engine = MatchingEngineImpl.builder().addOrderFlow(orderFlow).addMarketObserver(printer)
+		final MatchingEngine engine = MatchingEngineImpl.builder()//
+				.addOrderFlow(orderFlow)//
+				.addMarketObserver(printer)//
 				.build();
 
 		// when
@@ -69,7 +71,9 @@ public class MatchingEngineTest {
 		orders.add(new OrderImpl(audUsd, "UBS", Side.SELL, 0.7132, 2000000));
 		orders.add(new OrderImpl(audUsd, "CS", Side.BUY, 0.7136, 1000000));
 		final OrderFlow orderFlow = new ListOrderFlow(orders);
-		final MatchingEngine engine = MatchingEngineImpl.builder().addOrderFlow(orderFlow).addMarketObserver(printer)
+		final MatchingEngine engine = MatchingEngineImpl.builder()//
+				.addOrderFlow(orderFlow)//
+				.addMarketObserver(printer)//
 				.build();
 
 		// when

@@ -23,6 +23,8 @@
  */
 package org.tools4j.fx.make.position;
 
+import static org.junit.Assert.assertEquals;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,169 +42,170 @@ import org.tools4j.fx.make.risk.RiskLimitsImpl;
  * Unit test for {@link PositionKeeper} and {@link PositionKeeperImpl}.
  */
 public class PositionKeeperTest {
-	
+
 	private static final String BUY_PARTY = "PositionKeeperTest.BUY";
 	private static final String SELL_PARTY = "PositionKeeperTest.SELL";
 	private final CurrencyPair audUsd = new CurrencyPair(Currency.AUD, Currency.USD);
 	private final CurrencyPair eurUsd = new CurrencyPair(Currency.EUR, Currency.USD);
 	private final CurrencyPair eurAud = new CurrencyPair(Currency.EUR, Currency.AUD);
-	
+
 	private PositionKeeper positionKeeper;
-	
+
 	@Before
 	public void beforeEach() {
-		final RiskLimits riskLimits = RiskLimitsImpl.builder()
-				.withMaxAllowedPositionSize(Currency.AUD, 2000000)
-				.withMaxAllowedPositionSize(Currency.USD, 1500000)
-				.withMaxAllowedPositionSize(Currency.EUR, 1500000)
+		final RiskLimits riskLimits = RiskLimitsImpl.builder()//
+				.withMaxAllowedPositionSize(Currency.AUD, 2000000)//
+				.withMaxAllowedPositionSize(Currency.USD, 1500000)//
+				.withMaxAllowedPositionSize(Currency.EUR, 1500000)//
 				.build();
 		positionKeeper = new PositionKeeperImpl(riskLimits);
 	}
 
 	@Test
 	public void shouldUpdatePositionSellThenBuy() {
-		//when
+		// when
 		positionKeeper.updatePosition(createDeal(audUsd, 0.80, 1000000), Side.SELL);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", -1000000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", 800000, positionKeeper.getPosition(Currency.USD));
-		
-		//when
+
+		// then
+		assertEquals("unexpected AUD position", -1000000, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", 800000, positionKeeper.getPosition(Currency.USD));
+
+		// when
 		positionKeeper.updatePosition(createDeal(audUsd, 0.75, 1000000), Side.BUY);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", 0, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", 50000, positionKeeper.getPosition(Currency.USD));
+
+		// then
+		assertEquals("unexpected AUD position", 0, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", 50000, positionKeeper.getPosition(Currency.USD));
 	}
-	
+
 	@Test
 	public void shouldUpdatePositionSellThenBlockAnotherSell() {
-		//when
+		// when
 		positionKeeper.updatePosition(createDeal(audUsd, 0.80, 1000000), Side.SELL);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", -1000000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", 800000, positionKeeper.getPosition(Currency.USD));
-		
-		//when
+
+		// then
+		assertEquals("unexpected AUD position", -1000000, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", 800000, positionKeeper.getPosition(Currency.USD));
+
+		// when
 		try {
 			positionKeeper.updatePosition(createDeal(audUsd, 0.75, 1000000), Side.SELL);
 			Assert.fail("expected: " + IllegalArgumentException.class.getSimpleName());
 		} catch (IllegalArgumentException e) {
-			//then: deal breaches risk limits
+			// then: deal breaches risk limits
 		}
-		
-		//then: position unchanged
-		Assert.assertEquals("unexpected AUD position", -1000000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", 800000, positionKeeper.getPosition(Currency.USD));
+
+		// then: position unchanged
+		assertEquals("unexpected AUD position", -1000000, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", 800000, positionKeeper.getPosition(Currency.USD));
 	}
-	
+
 	@Test
 	public void shouldUpdatePositionWithUnlimitedRiskLimits() {
-		//given
-		final long million = 1000000L;
-		final long billion = 1000000000L;
-		final long trillion = 1000000000000L;
+		// given
+		final long mio = 1000000L;
+		final long bio = 1000000000L;
+		final long trio = 1000000000000L;
 		positionKeeper = new PositionKeeperImpl(RiskLimits.UNLIMITED);
-		
-		//when
-		positionKeeper.updatePosition(createDeal(audUsd, 1.0, million), Side.BUY);
-		positionKeeper.updatePosition(createDeal(audUsd, 1.0, billion), Side.BUY);
-		positionKeeper.updatePosition(createDeal(audUsd, 1.0, trillion), Side.BUY);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", million+billion+trillion, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -million-billion-trillion, positionKeeper.getPosition(Currency.USD));
-		
-		//when
-		positionKeeper.updatePosition(createDeal(audUsd, 1.0, trillion), Side.SELL);
-		positionKeeper.updatePosition(createDeal(audUsd, 1.0, trillion), Side.SELL);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", million+billion-trillion, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -million-billion+trillion, positionKeeper.getPosition(Currency.USD));
+
+		// when
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, mio), Side.BUY);
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, bio), Side.BUY);
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, trio), Side.BUY);
+
+		// then
+		assertEquals("unexpected AUD position", mio + bio + trio, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", -mio - bio - trio, positionKeeper.getPosition(Currency.USD));
+
+		// when
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, trio), Side.SELL);
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, trio), Side.SELL);
+
+		// then
+		assertEquals("unexpected AUD position", mio + bio - trio, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", -mio - bio + trio, positionKeeper.getPosition(Currency.USD));
 	}
 
 	@Test
 	public void shouldReturnMaxPossibleFillQuantityBuy() {
-		//when
+		// when
 		final long fillQty = positionKeeper.getMaxPossibleFillWithoutBreachingRiskLimits(audUsd, Side.BUY, 0.40);
-		
-		//then
-		Assert.assertEquals("unexpected fill quantity", 2000000, fillQty);
+
+		// then
+		assertEquals("unexpected fill quantity", 2000000, fillQty);
 	}
 
 	@Test
 	public void shouldReturnMaxPossibleFillQuantitySell() {
-		//when
+		// when
 		final long fillQty = positionKeeper.getMaxPossibleFillWithoutBreachingRiskLimits(audUsd, Side.SELL, 0.25);
-		
-		//then
-		Assert.assertEquals("unexpected fill quantity", 2000000, fillQty);
+
+		// then
+		assertEquals("unexpected fill quantity", 2000000, fillQty);
 	}
 
 	@Test
 	public void shouldReturnMaxPossibleFillQuantityBuyAfterPreviousSell() {
-		//when
+		// when
 		positionKeeper.updatePosition(createDeal(audUsd, 0.80, 1000000), Side.SELL);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", -1000000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", 800000, positionKeeper.getPosition(Currency.USD));
-		
-		//when
+
+		// then
+		assertEquals("unexpected AUD position", -1000000, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", 800000, positionKeeper.getPosition(Currency.USD));
+
+		// when
 		final long fillQty = positionKeeper.getMaxPossibleFillWithoutBreachingRiskLimits(audUsd, Side.BUY, 0.80);
-		
-		//then
-		Assert.assertEquals("unexpected fill quantity", 875000, fillQty);
+
+		// then
+		assertEquals("unexpected fill quantity", 875000, fillQty);
 	}
-	
+
 	@Test
 	public void shouldReturnMaxPossibleFillQuantitySellAfterPreviousBuy() {
-		//when
+		// when
 		positionKeeper.updatePosition(createDeal(audUsd, 0.75, 1000000), Side.BUY);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", 1000000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -750000, positionKeeper.getPosition(Currency.USD));
-		
-		//when
+
+		// then
+		assertEquals("unexpected AUD position", 1000000, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", -750000, positionKeeper.getPosition(Currency.USD));
+
+		// when
 		final long fillQty = positionKeeper.getMaxPossibleFillWithoutBreachingRiskLimits(audUsd, Side.SELL, 0.80);
-		
-		//then
-		Assert.assertEquals("unexpected fill quantity", 937500, fillQty);
+
+		// then
+		assertEquals("unexpected fill quantity", 937500, fillQty);
 	}
 
 	@Test
 	public void shouldUpdatePositionBuy3Pairs() {
-		//when
+		// when
 		positionKeeper.updatePosition(createDeal(audUsd, 0.75, 1000000), Side.BUY);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", 1000000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -750000, positionKeeper.getPosition(Currency.USD));
-		Assert.assertEquals("unexpected EUR position", 0, positionKeeper.getPosition(Currency.EUR));
-		
-		//when
-		positionKeeper.updatePosition(createDeal(eurAud, 1.25, 1000000), Side.BUY);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -750000, positionKeeper.getPosition(Currency.USD));
-		Assert.assertEquals("unexpected EUR position", 1000000, positionKeeper.getPosition(Currency.EUR));
 
-		//when
+		// then
+		assertEquals("unexpected AUD position", 1000000, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", -750000, positionKeeper.getPosition(Currency.USD));
+		assertEquals("unexpected EUR position", 0, positionKeeper.getPosition(Currency.EUR));
+
+		// when
+		positionKeeper.updatePosition(createDeal(eurAud, 1.25, 1000000), Side.BUY);
+
+		// then
+		assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", -750000, positionKeeper.getPosition(Currency.USD));
+		assertEquals("unexpected EUR position", 1000000, positionKeeper.getPosition(Currency.EUR));
+
+		// when
 		positionKeeper.updatePosition(createDeal(eurUsd, 1.20, 500000), Side.BUY);
-		
-		//then
-		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD));
-		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
+
+		// then
+		assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
+		assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD));
+		assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
 	}
 
 	private static Deal createDeal(AssetPair<?, ?> assetPair, double price, long qty) {
-		return new DealImpl(assetPair, price, qty,  Order.ID_GENERATOR.incrementAndGet(), BUY_PARTY, Order.ID_GENERATOR.incrementAndGet(), SELL_PARTY);
+		return new DealImpl(assetPair, price, qty, Order.ID_GENERATOR.incrementAndGet(), BUY_PARTY,
+				Order.ID_GENERATOR.incrementAndGet(), SELL_PARTY);
 	}
 
 }
