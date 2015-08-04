@@ -58,18 +58,18 @@ import org.tools4j.fx.make.risk.RiskLimits;
 
 public class MatchingEngineImpl implements MatchingEngine {
 
-	private final List<OrderFlow> orderFlows = new ArrayList<>();
-	private final Map<String, PartyStateImpl> partyStateByParty = new LinkedHashMap<>();
-	private final List<MarketObserver> marketObservers = new ArrayList<>();
+	private final List<OrderFlow> orderFlows;
+	private final Map<String, PartyStateImpl> partyStateByParty;
+	private final List<MarketObserver> marketObservers;
 
-	public MatchingEngineImpl(List<? extends OrderFlow> orderFlows, Map<? extends String, ? extends RiskLimits> riskLimitsByParty, Collection<? extends MarketObserver> observers) {
+	public MatchingEngineImpl(List<? extends OrderFlow> orderFlows, Map<? extends String, ? extends RiskLimits> riskLimitsByParty, Collection<? extends MarketObserver> marketObservers) {
 		Objects.requireNonNull(orderFlows, "orderFlows is null");
 		Objects.requireNonNull(riskLimitsByParty, "riskLimitsByParty is null");
-		Objects.requireNonNull(observers, "observers is null");
-		this.orderFlows.addAll(orderFlows);
-		this.partyStateByParty.putAll(riskLimitsByParty.entrySet().stream()
-				.collect(Collectors.toMap(e -> e.getKey(), e -> new PartyStateImpl(e.getKey(), e.getValue()))));
-		this.marketObservers.addAll(marketObservers);
+		Objects.requireNonNull(marketObservers, "marketObservers is null");
+		this.orderFlows = new ArrayList<>(orderFlows);
+		this.partyStateByParty = riskLimitsByParty.entrySet().stream()
+				.collect(Collectors.toMap(e -> e.getKey(), e -> new PartyStateImpl(e.getKey(), e.getValue())));
+		this.marketObservers = new ArrayList<>(marketObservers);
 	}
 	
 	public static Builder builder() {
@@ -83,9 +83,9 @@ public class MatchingEngineImpl implements MatchingEngine {
 		return matchingState;
 	}
 
-	private void match(MatchingStateImpl matchingState, AssetPair<?, ?> assetPair, Stream<Order> assetStream) {
-		final Stream<Order> bidStream = assetStream.filter(o -> o.getSide() == Side.BUY).sorted(OrderPriceComparator.BUY);
-		final Stream<Order> askStream = assetStream.filter(o -> o.getSide() == Side.SELL).sorted(OrderPriceComparator.SELL);
+	private void match(MatchingStateImpl matchingState, AssetPair<?, ?> assetPair, List<Order> assetOrders) {
+		final Stream<Order> bidStream = assetOrders.stream().filter(o -> o.getSide() == Side.BUY).sorted(OrderPriceComparator.BUY);
+		final Stream<Order> askStream = assetOrders.stream().filter(o -> o.getSide() == Side.SELL).sorted(OrderPriceComparator.SELL);
 		final Iterator<Order> bids = bidStream.iterator();
 		final Iterator<Order> asks = askStream.iterator();
 		Order bid = matchingState.notifyAndReturnNextOrderOrNull(bids);
@@ -93,7 +93,7 @@ public class MatchingEngineImpl implements MatchingEngine {
 		//match as long as possible
 		while (bid != null & ask != null) {
 			long matchQty = OrderMatcher.matchQuantity(bid, ask);
-			if (matchQty == 0) {
+			if (matchQty != 0) {
 				final double midRate = (bid.getPrice() + ask.getPrice()) / 2;
 				final PartyStateImpl bidState = partyStateByParty.get(bid.getParty()); 
 				final PartyStateImpl askState = partyStateByParty.get(ask.getParty());
@@ -110,7 +110,7 @@ public class MatchingEngineImpl implements MatchingEngine {
 					final long fillQty = Math.min(bidQty, askQty);
 					final Deal deal = new DealImpl(assetPair, midRate, fillQty, bid.getId(), bid.getParty(), ask.getId(), ask.getParty());
 					getOrCreatePartyState(bid.getParty()).registerDeal(deal, Side.BUY);
-					getOrCreatePartyState(bid.getParty()).registerDeal(deal, Side.SELL);
+					getOrCreatePartyState(ask.getParty()).registerDeal(deal, Side.SELL);
 					matchingState.notifyAllMarketObservers(deal);
 					//carve out fillQty or go to next if fully filled
 					bid = matchingState.getRemainingOrderOrNext(deal, bid, bids);
@@ -223,8 +223,8 @@ public class MatchingEngineImpl implements MatchingEngine {
 			//group by asset pair and match each group
 			final Set<AssetPair<?, ?>> assetPairs = orders.stream().map(o -> o.getAssetPair()).collect(Collectors.toSet());
 			for (final AssetPair<?, ?> assetPair : assetPairs) {
-				final Stream<Order> assetStream = orders.stream().filter(o -> assetPair.equals(o.getAssetPair()));
-				match(this, assetPair, assetStream);
+				final List<Order> assetOrders = orders.stream().filter(o -> assetPair.equals(o.getAssetPair())).collect(Collectors.toList());
+				match(this, assetPair, assetOrders);
 			}
 			this.index.incrementAndGet();
 			this.hasMore.set(!orders.isEmpty());
@@ -285,6 +285,11 @@ public class MatchingEngineImpl implements MatchingEngine {
 			Objects.requireNonNull(marketObserver, "marketObserver is null");
 			marketObservers.add(marketObserver);
 			return this;
+		}
+		
+		@Override
+		public MatchingEngine build() {
+			return new MatchingEngineImpl(orderFlows, riskLimitsByParty, marketObservers);
 		}
 		
 	}

@@ -66,8 +66,8 @@ public class PositionKeeperImpl implements PositionKeeper {
 		final long termsPos = getPosition(assetPair.getTerms());
 		// opposite side for base because we fill the order, i.e. we act as
 		// counter party
-		double baseQty = baseMax - getSignedQuantity(basePos, orderSide.opposite());
-		double termsQty = termsMax - getSignedQuantity(termsPos, orderSide);
+		double baseQty = baseMax < Long.MAX_VALUE ? baseMax - getSignedQuantity(basePos, orderSide.opposite()) : Long.MAX_VALUE;
+		double termsQty = termsMax < Long.MAX_VALUE ? termsMax - getSignedQuantity(termsPos, orderSide) : Long.MAX_VALUE;
 		return (long) (baseQty * rate <= termsQty ? baseQty : termsQty / rate);
 	}
 

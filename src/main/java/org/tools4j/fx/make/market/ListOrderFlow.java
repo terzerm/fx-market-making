@@ -21,27 +21,39 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.asset;
+package org.tools4j.fx.make.market;
 
-public enum Currency implements Asset {
-	//order precedence currencies
-	EUR,
-	GBP,
-	AUD,
-	NZD,
-	FJD,
-	TOP,
-	WST,
-	PGK,
-	BWP,
-	SBD,
-	USD,
-	//others
-	JPY,
-	CHF,
-	CAD;
-	@Override
-	public AssetType type() {
-		return AssetType.CURRENCY;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.tools4j.fx.make.execution.Order;
+
+/**
+ * An {@link OrderFlow} returning once a single list with orders
+ * that have been passed to the constructor.
+ */
+public class ListOrderFlow implements OrderFlow {
+	
+	private final AtomicBoolean eof = new AtomicBoolean(false);
+	private final List<Order> orders;
+	
+	public ListOrderFlow(Collection<? extends Order> orders) {
+		this.orders = new ArrayList<>(orders);
 	}
+
+	@Override
+	public List<Order> nextOrders() {
+		if (eof.compareAndSet(false, true)) {
+			return new ArrayList<>(orders);
+		}
+		return Collections.emptyList();
+	}
+	
+	public void reset() {
+		eof.set(false);
+	}
+
 }

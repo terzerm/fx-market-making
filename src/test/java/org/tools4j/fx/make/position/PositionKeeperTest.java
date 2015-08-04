@@ -99,6 +99,32 @@ public class PositionKeeperTest {
 	}
 	
 	@Test
+	public void shouldUpdatePositionWithUnlimitedRiskLimits() {
+		//given
+		final long million = 1000000L;
+		final long billion = 1000000000L;
+		final long trillion = 1000000000000L;
+		positionKeeper = new PositionKeeperImpl(RiskLimits.UNLIMITED);
+		
+		//when
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, million), Side.BUY);
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, billion), Side.BUY);
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, trillion), Side.BUY);
+		
+		//then
+		Assert.assertEquals("unexpected AUD position", million+billion+trillion, positionKeeper.getPosition(Currency.AUD));
+		Assert.assertEquals("unexpected USD position", -million-billion-trillion, positionKeeper.getPosition(Currency.USD));
+		
+		//when
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, trillion), Side.SELL);
+		positionKeeper.updatePosition(createDeal(audUsd, 1.0, trillion), Side.SELL);
+		
+		//then
+		Assert.assertEquals("unexpected AUD position", million+billion-trillion, positionKeeper.getPosition(Currency.AUD));
+		Assert.assertEquals("unexpected USD position", -million-billion+trillion, positionKeeper.getPosition(Currency.USD));
+	}
+
+	@Test
 	public void shouldReturnMaxPossibleFillQuantityBuy() {
 		//when
 		final long fillQty = positionKeeper.getMaxPossibleFillWithoutBreachingRiskLimits(audUsd, Side.BUY, 0.40);

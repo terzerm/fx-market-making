@@ -73,7 +73,7 @@ public class StringUtil {
 	 * @return a formatted price with 6 decimal places
 	 */
 	public static final String formatPrice(double price) {
-		return String.format("%0.6f", price);
+		return String.format("%.6f", price);
 	}
 
 	/**

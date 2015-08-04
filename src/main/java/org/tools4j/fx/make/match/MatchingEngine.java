@@ -110,6 +110,8 @@ public interface MatchingEngine {
 		Builder setRiskLimits(String party, RiskLimits riskLimits);
 
 		Builder addMarketObserver(MarketObserver marketObserver);
+		
+		MatchingEngine build();
 	}
 
 	/**
