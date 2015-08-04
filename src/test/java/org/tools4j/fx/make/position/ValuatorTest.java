@@ -28,17 +28,18 @@ import org.junit.Before;
 import org.junit.Test;
 import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.asset.CurrencyPair;
-import org.tools4j.fx.make.config.Settings;
-import org.tools4j.fx.make.config.SettingsImpl;
-import org.tools4j.fx.make.execution.OrderImpl;
+import org.tools4j.fx.make.execution.DealImpl;
 import org.tools4j.fx.make.execution.Side;
+import org.tools4j.fx.make.risk.RiskLimits;
+import org.tools4j.fx.make.risk.RiskLimitsImpl;
 
 /**
  * Unit test for {@link Valuator} and {@link ValuatorImpl}.
  */
 public class ValuatorTest {
 	
-	private final String party = "ValuatorTest";
+	private final String buyParty = "ValuatorTest.BUY";
+	private final String sellParty = "ValuatorTest.SELL";
 	private final CurrencyPair audUsd = new CurrencyPair(Currency.AUD, Currency.USD);
 	private final CurrencyPair eurUsd = new CurrencyPair(Currency.EUR, Currency.USD);
 	private final CurrencyPair eurAud = new CurrencyPair(Currency.EUR, Currency.AUD);
@@ -47,24 +48,25 @@ public class ValuatorTest {
 	
 	@Before
 	public void beforeEach() {
-		final Settings settings = SettingsImpl.builder()
+		//risk limits
+		final RiskLimits riskLimits = RiskLimitsImpl.builder()
 				.withMaxAllowedPositionSize(Currency.AUD, 2000000)
 				.withMaxAllowedPositionSize(Currency.USD, 1500000)
 				.withMaxAllowedPositionSize(Currency.EUR, 1500000)
 				.build();
-		positionKeeper = new PositionKeeperImpl(settings);
+		positionKeeper = new PositionKeeperImpl(riskLimits);
+		
+		//create some positions
+		positionKeeper.updatePosition(new DealImpl(audUsd, 0.75, 1000000, 1, buyParty, 2, sellParty), Side.BUY);
+		positionKeeper.updatePosition(new DealImpl(eurAud, 1.25, 1000000, 3, buyParty, 4, sellParty), Side.BUY);
+		positionKeeper.updatePosition(new DealImpl(eurUsd, 1.20, 500000, 5, buyParty, 6, sellParty), Side.BUY);
+		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
+		Assert.assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD));
+		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
 	}
 
 	@Test
 	public void shouldValuateInPositionCurrency() {
-		//given: position
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(audUsd, party, Side.SELL, 0.75, 1000000), true);
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(eurAud, party, Side.SELL, 1.25, 1000000), true);
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(eurUsd, party, Side.SELL, 1.20, 1000000), true);
-		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD));
-		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
-
 		//given: market rates
 		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder().build();
 		
@@ -81,14 +83,6 @@ public class ValuatorTest {
 
 	@Test
 	public void shouldValuateInUSD() {
-		//given: position
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(audUsd, party, Side.SELL, 0.75, 1000000), true);
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(eurAud, party, Side.SELL, 1.25, 1000000), true);
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(eurUsd, party, Side.SELL, 1.20, 1000000), true);
-		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD));
-		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
-
 		//given: market rates
 		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder()
 				.withRate(audUsd, 0.76)
@@ -112,14 +106,6 @@ public class ValuatorTest {
 
 	@Test
 	public void shouldValuateInEUR() {
-		//given: position
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(audUsd, party, Side.SELL, 0.75, 1000000), true);
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(eurAud, party, Side.SELL, 1.25, 1000000), true);
-		positionKeeper.fillWithoutExceedingMax(new OrderImpl(eurUsd, party, Side.SELL, 1.20, 1000000), true);
-		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD));
-		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
-
 		//given: market rates
 		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder()
 				.withRate(audUsd, 0.76)

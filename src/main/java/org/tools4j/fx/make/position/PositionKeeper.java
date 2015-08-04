@@ -24,18 +24,42 @@
 package org.tools4j.fx.make.position;
 
 import org.tools4j.fx.make.asset.Asset;
-import org.tools4j.fx.make.execution.Order;
+import org.tools4j.fx.make.execution.Deal;
+import org.tools4j.fx.make.execution.Side;
 
 /**
- * Keeps track positions for several {@link Asset}s. Adds
- * modifying methods to {@link PositionLookup}.
+ * Keeps track positions for several {@link Asset}s. Adds modifying methods to
+ * {@link AssetPositions}.
  */
-public interface PositionKeeper extends PositionLookup {
+public interface PositionKeeper extends AssetPositions {
 
-	long fillWithoutExceedingMax(Order order, boolean allowPartial);
+	/**
+	 * Update the position for the given {@code deal}. The specified
+	 * {@code side} refers to the deal side viewed from the position to be
+	 * updated (e.g. the position should be increased by the deal amount if side
+	 * is BUY).
+	 * 
+	 * @param deal
+	 *            the deal to incorprate into the position
+	 * @param side
+	 *            the side from the position keeper's view
+	 * @throws IllegalArgumentException
+	 *             if the deal is too large to be added to the position (it
+	 *             would breach the risk limits)
+	 */
+	void updatePosition(Deal deal, Side side);
 
+	/**
+	 * Sets the position for the specified asset to zero
+	 * 
+	 * @param asset
+	 *            the asset whose position to reset
+	 */
 	void resetPosition(Asset asset);
 
+	/**
+	 * Sets all positions to zero
+	 */
 	void resetPositions();
-	
+
 }

@@ -27,13 +27,13 @@ import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.asset.Currency;
 
 /**
- * Values a position or all positions of a {@link PositionLookup} using a snapshot
+ * Values a position or all positions of a {@link AssetPositions} using a snapshot
  * of current {@link MarketSnapshotImpl} to perform the valuation. A valuator has a
  * designated {@link #getValuationCurrency() valuation currency}.
  */
 public interface Valuator {
 	
-	PositionLookup getPositionLookup();
+	AssetPositions getAssetPositions();
 
 	Currency getValuationCurrency();
 

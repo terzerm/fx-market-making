@@ -21,23 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.execution;
+package org.tools4j.fx.make.match;
+
+import org.tools4j.fx.make.execution.Order;
+import org.tools4j.fx.make.execution.Side;
 
 /**
- * Matches two orders if a match is possible.
+ * Matches two orders if a match is possible. Supports partial and full fills,
+ * that is, the order quantities are allowed to be different.
  */
-public enum OrderMatcher {
-	/**
-	 * Matcher allowing only full fills, that is, the order quantities must be
-	 * identical to allow for a match.
-	 */
-	FULL, //
-	/**
-	 * Matcher allowing for partial and full fills, that is, the order
-	 * quantities are allowed to be different.
-	 */
-	PARTIAL;
-
+public final class OrderMatcher {
 	/**
 	 * Returns the match quantity if a match is possible and zero if not.
 	 * 
@@ -48,7 +41,7 @@ public enum OrderMatcher {
 	 * @return the match quantity (no more than min of the order quantities) or
 	 *         zero for no match
 	 */
-	public long matchQuantity(Order order1, Order order2) {
+	public static long matchQuantity(Order order1, Order order2) {
 		if (isMatchPossible(order1, order2)) {
 			return Math.min(order1.getQuantity(), order2.getQuantity());
 		}
@@ -64,11 +57,8 @@ public enum OrderMatcher {
 	 *            the second order to match
 	 * @return true if and only if a match is possible between the two orders
 	 */
-	public boolean isMatchPossible(Order order1, Order order2) {
+	public static boolean isMatchPossible(Order order1, Order order2) {
 		if (!order1.getAssetPair().equals(order2.getAssetPair())) {
-			return false;
-		}
-		if (this == FULL & order1.getQuantity() != order2.getQuantity()) {
 			return false;
 		}
 		final Order buyOrder = order1.getSide() == Side.BUY ? order1 : order2.getSide() == Side.BUY ? order2 : null;

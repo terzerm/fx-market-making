@@ -36,7 +36,7 @@ import org.tools4j.fx.make.asset.CurrencyPair;
 /**
  * Unit test for {@link MarketSnapshot} and {@link MarketSnapshotImpl}.
  */
-public class MarketRatesTest {
+public class MarketSnapshotTest {
 	
 	private PairAndRate[] pairsAndRates;
 	private MarketSnapshot marketSnapshot;

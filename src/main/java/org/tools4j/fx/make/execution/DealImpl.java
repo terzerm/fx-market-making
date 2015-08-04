@@ -26,6 +26,7 @@ package org.tools4j.fx.make.execution;
 import java.util.Objects;
 
 import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.match.OrderMatcher;
 import org.tools4j.fx.make.util.StringUtil;
 
 public class DealImpl implements Deal {
@@ -62,7 +63,7 @@ public class DealImpl implements Deal {
 		if (price < 0 || Double.isNaN(price)) {
 			throw new IllegalArgumentException("invalid price: " + price);
 		}
-		if (!OrderMatcher.PARTIAL.isMatchPossible(order1, order2)) {
+		if (!OrderMatcher.isMatchPossible(order1, order2)) {
 			throw new IllegalArgumentException("order match is not possible: order1=" + order1 + "order2=" + order1);
 		}
 		final Order buyOrder = order1.getSide() == Side.BUY ? order1 : order2.getSide() == Side.BUY ? order2 : null;
@@ -117,7 +118,7 @@ public class DealImpl implements Deal {
 	}
 
 	public String toShortString() {
-		return StringUtil.formatQuantity(getQuantity()) + "@" + StringUtil.formatPrice(getPrice());
+		return getAssetPair() + "[" + StringUtil.formatQuantityAndPrice(getQuantity(), getPrice()) + "]";
 	}
 
 	@Override

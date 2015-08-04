@@ -23,10 +23,11 @@
  */
 package org.tools4j.fx.make.execution;
 
+import static org.tools4j.fx.make.util.StringUtil.formatQuantityAndPrice;
+
 import java.util.Objects;
 
 import org.tools4j.fx.make.asset.AssetPair;
-import org.tools4j.fx.make.util.StringUtil;
 
 /**
  * An immutable {@link Order}.
@@ -98,7 +99,7 @@ public class OrderImpl implements Order {
 	}
 
 	public String toShortString() {
-		return getSide() + ":" + StringUtil.formatQuantity(getQuantity()) + "@" + StringUtil.formatPrice(getPrice());
+		return getSide() + ":" + getAssetPair() + "[" + formatQuantityAndPrice(getQuantity(), getPrice()) + "]";
 	}
 
 	@Override

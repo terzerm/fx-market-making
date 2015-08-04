@@ -21,45 +21,50 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.position;
-
-import java.util.Objects;
-import java.util.Set;
+package org.tools4j.fx.make.risk;
 
 import org.tools4j.fx.make.asset.Asset;
-import org.tools4j.fx.make.asset.AssetPair;
-import org.tools4j.fx.make.asset.Currency;
-import org.tools4j.fx.make.execution.Side;
 
 /**
- * Implementation of {@link PositionLookup} around  a {@link PositionKeeper}
- * to hide and herewith protect the modifying methods from unauthorized use.
+ * Risk limits for positions such as maximum allowed position size.
  */
-public class PositionLookupImpl implements PositionLookup {
-
-	private final PositionKeeper positionKeeper;
+public interface RiskLimits {
+	/**
+	 * The maximum positions size for the specified asset, never negative
+	 * 
+	 * @param asset
+	 *            the asset of interest
+	 * @return the absolute max position size for the given asset, not negative
+	 */
+	long getMaxAllowedPositionSize(Asset asset);
 	
-	public PositionLookupImpl(PositionKeeper positionKeeper) {
-		this.positionKeeper = Objects.requireNonNull(positionKeeper, "positionKeeper is null");
-	}
-	@Override
-	public long getMaxPossibleFillWithoutExceedingMax(AssetPair<?, ?> assetPair, Side orderSide, double rate) {
-		return positionKeeper.getMaxPossibleFillWithoutExceedingMax(assetPair, orderSide, rate);
-	}
+	RiskLimits UNLIMITED = (a -> Long.MAX_VALUE);
 
-	@Override
-	public Set<Asset> getPositionAssets() {
-		return positionKeeper.getPositionAssets();
-	}
+	/**
+	 * Builder for {@link RiskLimits} which are immutable;
+	 */
+	interface Builder {
+		/**
+		 * The maximum positions size for the specified asset, never negative
+		 * 
+		 * @param asset
+		 *            the asset of interest
+		 * @param maxPositionSize
+		 *            the absolute max position size for the given asset, not
+		 *            negative
+		 * @throws IllegalArgumentException
+		 *             if size is negative
+		 * @throws NullPointerException
+		 *             if asset is null
+		 * @return this builder for chained method invocation
+		 */
+		Builder withMaxAllowedPositionSize(Asset asset, long maxPositionSize);
 
-	@Override
-	public long getPosition(Asset asset) {
-		return positionKeeper.getPosition(asset);
+		/**
+		 * Returns a new immutable settings instance.
+		 * 
+		 * @return a new immutable settings instance.
+		 */
+		RiskLimits build();
 	}
-
-	@Override
-	public Valuator getValuator(Currency valuationCurrency) {
-		return positionKeeper.getValuator(valuationCurrency);
-	}
-
 }
