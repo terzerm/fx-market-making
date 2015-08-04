@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.config;
+package org.tools4j.fx.make.risk;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,11 +29,14 @@ import java.util.Objects;
 
 import org.tools4j.fx.make.asset.Asset;
 
-public class SettingsImpl implements Settings {
+/**
+ * Immutable implementation of {@link RiskLimits}.
+ */
+public class RiskLimitsImpl implements RiskLimits {
 
 	private final Map<Asset, Long> maxPositionSizeByAsset;
 
-	public SettingsImpl(Map<? extends Asset, Long> maxPositionSizeByAsset) {
+	public RiskLimitsImpl(Map<? extends Asset, Long> maxPositionSizeByAsset) {
 		this.maxPositionSizeByAsset = new HashMap<>(maxPositionSizeByAsset);
 	}
 	public long getMaxAllowedPositionSize(Asset asset) {
@@ -50,7 +53,7 @@ public class SettingsImpl implements Settings {
 		return new Builder();
 	}
 	
-	public static class Builder implements Settings.Builder {
+	public static class Builder implements RiskLimits.Builder {
 		
 		private final Map<Asset, Long> maxPositionSizeByAsset = new HashMap<>();
 
@@ -65,8 +68,8 @@ public class SettingsImpl implements Settings {
 		}
 
 		@Override
-		public Settings build() {
-			return new SettingsImpl(maxPositionSizeByAsset);
+		public RiskLimits build() {
+			return new RiskLimitsImpl(maxPositionSizeByAsset);
 		}
 		
 		@Override

@@ -91,8 +91,8 @@ public interface Deal {
 	String getSellParty();
 
 	/**
-	 * Returns a string of the form: 1.2M@1.24637
-	 * @return a short string with quantity and price
+	 * Returns a string of the form: AUD/USD[1.2M@1.246370]
+	 * @return a short string with symbol, quantity and price
 	 */
 	String toShortString();
 

@@ -34,16 +34,16 @@ import org.tools4j.fx.make.asset.Currency;
 public class ValuatorImpl implements Valuator {
 
 	private final Currency valuationCurrency;
-	private final PositionLookup positionLookup;
+	private final AssetPositions assetPositions;
 
-	public ValuatorImpl(Currency valuationCurrency, PositionLookup positionLookup) {
+	public ValuatorImpl(Currency valuationCurrency, AssetPositions assetPositions) {
 		this.valuationCurrency = Objects.requireNonNull(valuationCurrency, "valuationCurrency is null");
-		this.positionLookup = Objects.requireNonNull(positionLookup, "positionLookup is null");
+		this.assetPositions = Objects.requireNonNull(assetPositions, "assetPositions is null");
 	}
 	
 	@Override
-	public PositionLookup getPositionLookup() {
-		return positionLookup;
+	public AssetPositions getAssetPositions() {
+		return assetPositions;
 	}
 	
 	@Override
@@ -54,7 +54,7 @@ public class ValuatorImpl implements Valuator {
 	@Override
 	public double getValuation(MarketSnapshot marketSnapshot) {
 		double value = 0;
-		for (final Asset asset : positionLookup.getPositionAssets()) {
+		for (final Asset asset : assetPositions.getAssets()) {
 			value += getValuation(asset, marketSnapshot);
 		}
 		return value;
@@ -64,7 +64,7 @@ public class ValuatorImpl implements Valuator {
 	public double getValuation(Asset asset, MarketSnapshot marketSnapshot) {
 		Objects.requireNonNull(asset, "asset is null");
 		Objects.requireNonNull(marketSnapshot, "marketSnapshot is null");
-		final long position = positionLookup.getPosition(asset);
+		final long position = assetPositions.getPosition(asset);
 		if (position == 0) {
 			return 0;
 		}
@@ -74,6 +74,6 @@ public class ValuatorImpl implements Valuator {
 
 	@Override
 	public String toString() {
-		return getClass().getSimpleName() + "{valuationCurrency=" + valuationCurrency + ", positionLookup=" + positionLookup + "}";
+		return getClass().getSimpleName() + "{valuationCurrency=" + valuationCurrency + ", assetPositions=" + assetPositions + "}";
 	}
 }

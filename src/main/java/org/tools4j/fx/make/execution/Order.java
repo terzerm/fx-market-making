@@ -74,8 +74,8 @@ public interface Order {
 	long getQuantity();
 	
 	/**
-	 * Returns a string of the form: BUY:1.2M@1.24637
-	 * @return a short string with side, quantity and price
+	 * Returns a string of the form: BUY:AUD/USD[1.2M@1.246370]
+	 * @return a short string with side, symbol, quantity and price
 	 */
 	String toShortString();
 	

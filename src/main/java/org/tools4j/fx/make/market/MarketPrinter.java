@@ -21,48 +21,46 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.config;
+package org.tools4j.fx.make.market;
 
-import org.tools4j.fx.make.asset.Asset;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.util.Objects;
+
+import org.tools4j.fx.make.execution.Deal;
+import org.tools4j.fx.make.execution.Order;
 
 /**
- * Immutable settings.
+ * Prints all actions occuring in the market to I/O.
  */
-public interface Settings {
-	/**
-	 * The maximum positions size for the specified asset, never negative
-	 * 
-	 * @param asset
-	 *            the asset of interest
-	 * @return the absolute max position size for the given asset, not negative
-	 */
-	long getMaxAllowedPositionSize(Asset asset);
-
-	/**
-	 * Builder for {@link Settings} which are immutable;
-	 */
-	interface Builder {
-		/**
-		 * The maximum positions size for the specified asset, never negative
-		 * 
-		 * @param asset
-		 *            the asset of interest
-		 * @param maxPositionSize
-		 *            the absolute max position size for the given asset, not
-		 *            negative
-		 * @throws IllegalArgumentException
-		 *             if size is negative
-		 * @throws NullPointerException
-		 *             if asset is null
-		 * @return this builder for chained method invocation
-		 */
-		Builder withMaxAllowedPositionSize(Asset asset, long maxPositionSize);
-
-		/**
-		 * Returns a new immutable settings instance.
-		 * 
-		 * @return a new immutable settings instance.
-		 */
-		Settings build();
+public class MarketPrinter implements MarketObserver {
+	
+	private final PrintStream printStream;
+	
+	public MarketPrinter() {
+		this(System.out);
 	}
+	public MarketPrinter(File file) throws FileNotFoundException {
+		this(new FileOutputStream(file));
+	}
+	public MarketPrinter(OutputStream out) {
+		this(new PrintStream(out));
+	}
+	public MarketPrinter(PrintStream printStream) {
+		this.printStream = Objects.requireNonNull(printStream, "printStream is null");
+	}
+	
+	@Override
+	public void onOrder(Order order) {
+		printStream.println("ORDER:\t" + order.toShortString());
+	}
+
+	@Override
+	public void onDeal(Deal deal) {
+		printStream.println("DEAL:\t" + deal.toShortString() + "\t(" + deal.getBuyParty() + " <--> " + deal.getSellParty() + ")");
+	}
+
 }

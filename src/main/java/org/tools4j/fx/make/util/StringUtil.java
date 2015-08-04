@@ -66,7 +66,7 @@ public class StringUtil {
 	}
 
 	/**
-	 * Returns the given price formmatted to 6 decimal places
+	 * Returns the given price formatted to 6 decimal places
 	 * 
 	 * @param price
 	 *            the price to format
@@ -74,6 +74,21 @@ public class StringUtil {
 	 */
 	public static final String formatPrice(double price) {
 		return String.format("%0.6f", price);
+	}
+
+	/**
+	 * Returns a string of the form: 1.2M@1.246372
+	 * 
+	 * @param quantity
+	 *            the quantity to format
+	 * @param price
+	 *            the price to format
+	 * @return a formatted string (price with 6 decimal places)
+	 * @see #formatQuantity(long)
+	 * @see #formatPrice(double)
+	 */
+	public static final String formatQuantityAndPrice(long quantity, double price) {
+		return formatQuantity(quantity) + "@" + formatPrice(price);
 	}
 
 	// no instances

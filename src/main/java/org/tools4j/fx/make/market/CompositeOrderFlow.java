@@ -41,6 +41,9 @@ public class CompositeOrderFlow implements OrderFlow {
 
 	public CompositeOrderFlow(OrderFlow... orderFlows) {
 		this.orderFlows = Arrays.copyOf(orderFlows, orderFlows.length);
+		if (Arrays.stream(orderFlows).anyMatch(x -> x == null)) {
+			throw new IllegalArgumentException("at least one element in array is null: " + Arrays.toString(orderFlows));
+		}
 	}
 
 	public CompositeOrderFlow(Collection<? extends OrderFlow> orderFlows) {

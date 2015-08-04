@@ -33,9 +33,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.asset.Currency;
-import org.tools4j.fx.make.config.Settings;
-import org.tools4j.fx.make.execution.Order;
+import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Side;
+import org.tools4j.fx.make.risk.RiskLimits;
 
 /**
  * Keeps track positions for several symbols.
@@ -44,49 +44,53 @@ import org.tools4j.fx.make.execution.Side;
  */
 public class PositionKeeperImpl implements PositionKeeper {
 
-	private final Settings settings;
+	private final RiskLimits riskLimits;
 	private final Map<Asset, AtomicLong> positionByAsset = new HashMap<>();
 
-	public PositionKeeperImpl(Settings settings) {
-		this.settings = Objects.requireNonNull(settings, "settings is null");
+	public PositionKeeperImpl(RiskLimits riskLimits) {
+		this.riskLimits = Objects.requireNonNull(riskLimits, "riskLimits is null");
 	}
 
 	@Override
-	public long getMaxPossibleFillWithoutExceedingMax(AssetPair<?, ?> assetPair, Side orderSide, double rate) {
-		final long baseMax = settings.getMaxAllowedPositionSize(assetPair.getBase());
-		final long termsMax = settings.getMaxAllowedPositionSize(assetPair.getTerms());
+	public RiskLimits getRiskLimits() {
+		return riskLimits;
+	}
+
+	@Override
+	public long getMaxPossibleFillWithoutBreachingRiskLimits(AssetPair<?, ?> assetPair, Side orderSide, double rate) {
+		Objects.requireNonNull(assetPair, "assetPair is null");
+		Objects.requireNonNull(orderSide, "orderSide is null");
+		final long baseMax = riskLimits.getMaxAllowedPositionSize(assetPair.getBase());
+		final long termsMax = riskLimits.getMaxAllowedPositionSize(assetPair.getTerms());
 		final long basePos = getPosition(assetPair.getBase());
 		final long termsPos = getPosition(assetPair.getTerms());
-		// opposite side for base because we fill the order, i.e. we take the
-		// opposite position
+		// opposite side for base because we fill the order, i.e. we act as
+		// counter party
 		double baseQty = baseMax - getSignedQuantity(basePos, orderSide.opposite());
 		double termsQty = termsMax - getSignedQuantity(termsPos, orderSide);
 		return (long) (baseQty * rate <= termsQty ? baseQty : termsQty / rate);
 	}
 
 	@Override
-	public long fillWithoutExceedingMax(Order order, boolean allowPartial) {
-		final AssetPair<?, ?> assetPair = order.getAssetPair();
-		final long orderQty = order.getQuantity();
-		final long maxQty = getMaxPossibleFillWithoutExceedingMax(assetPair, order.getSide(), order.getPrice());
-		final long partialQty = Math.min(orderQty, maxQty);
-		if (allowPartial | orderQty == partialQty) {
-			// opposite side for base because we fill the order, i.e. we take
-			// the opposite position
-			final long baseQty = (long) getSignedQuantity(partialQty, order.getSide().opposite());
-			final long termsQty = (long) getSignedQuantity(partialQty * order.getPrice(), order.getSide());
-			if (baseQty != 0 & termsQty != 0) {
-				getOrCreatePosition(assetPair.getBase()).addAndGet(baseQty);
-				getOrCreatePosition(assetPair.getTerms()).addAndGet(termsQty);
-				return Math.abs(baseQty);
-			}
+	public void updatePosition(Deal deal, Side side) {
+		Objects.requireNonNull(deal, "deal is null");
+		Objects.requireNonNull(side, "side is null");
+		final AssetPair<?, ?> assetPair = deal.getAssetPair();
+		final long dealQty = deal.getQuantity();
+		final long maxQty = getMaxPossibleFillWithoutBreachingRiskLimits(assetPair, side.opposite(), deal.getPrice());
+		if (dealQty > maxQty) {
+			throw new IllegalArgumentException(
+					"deal would breach risk limits: " + dealQty + " > " + maxQty + " for " + deal);
 		}
-		// no or not enough quantity left
-		return 0;
+		final long baseQty = getSignedQuantity(dealQty, side);
+		final long termsQty = getSignedQuantity(dealQty * deal.getPrice(), side.opposite());
+		getOrCreatePosition(assetPair.getBase()).addAndGet(baseQty);
+		getOrCreatePosition(assetPair.getTerms()).addAndGet(termsQty);
 	}
 
-	private static double getSignedQuantity(double quantity, Side side) {
-		return side == Side.BUY ? quantity : -quantity;
+	private static long getSignedQuantity(double quantity, Side side) {
+		final double signed = side == Side.BUY ? quantity : -quantity;
+		return (long) (signed >= 0 ? Math.ceil(signed) : Math.floor(signed));
 	}
 
 	private AtomicLong getOrCreatePosition(Asset asset) {
@@ -99,7 +103,7 @@ public class PositionKeeperImpl implements PositionKeeper {
 	}
 
 	@Override
-	public Set<Asset> getPositionAssets() {
+	public Set<Asset> getAssets() {
 		return Collections.unmodifiableSet(positionByAsset.keySet());
 	}
 
@@ -118,7 +122,7 @@ public class PositionKeeperImpl implements PositionKeeper {
 	public void resetPositions() {
 		positionByAsset.clear();
 	}
-	
+
 	@Override
 	public Valuator getValuator(Currency valuationCurrency) {
 		return new ValuatorImpl(valuationCurrency, this);

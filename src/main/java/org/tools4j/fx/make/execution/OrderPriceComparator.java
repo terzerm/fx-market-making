@@ -36,4 +36,7 @@ public enum OrderPriceComparator implements Comparator<Order> {
 		final int cmp = Double.compare(o1.getPrice(), o2.getPrice());
 		return this == BUY ? -cmp : cmp;
 	}
+	public static final OrderPriceComparator valueOf(Side side) {
+		return side == Side.BUY ? BUY : SELL;
+	}
 }

@@ -33,7 +33,7 @@ import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.execution.Order;
 import org.tools4j.fx.make.execution.OrderImpl;
 import org.tools4j.fx.make.execution.Side;
-import org.tools4j.fx.make.position.PositionLookup;
+import org.tools4j.fx.make.position.AssetPositions;
 
 /**
  * A {@link MarketMaker} who takes the position size into account when a single
@@ -46,11 +46,11 @@ import org.tools4j.fx.make.position.PositionLookup;
  */
 abstract public class AbstractPositionAwareMarketMaker implements MarketMaker {
 
-	protected final PositionLookup positionLookup;
+	protected final AssetPositions assetPositions;
 	protected final AssetPair<?, ?> assetPair;
 
-	public AbstractPositionAwareMarketMaker(PositionLookup positionLookup, AssetPair<?, ?> assetPair) {
-		this.positionLookup = Objects.requireNonNull(positionLookup, "positionLookup is null");
+	public AbstractPositionAwareMarketMaker(AssetPositions assetPositions, AssetPair<?, ?> assetPair) {
+		this.assetPositions = Objects.requireNonNull(assetPositions, "assetPositions is null");
 		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
 	}
 	
@@ -88,9 +88,9 @@ abstract public class AbstractPositionAwareMarketMaker implements MarketMaker {
 	abstract protected double nextPrice(Side side, String party, long desiredQuantity);
 
 	protected long nextConnstrainedQuantity(Side side, String party, long desiredQuantity, double price) {
-		// side is the maker side, but positionLookup expects taker side
+		// side is the maker side, but assetPositions expects taker side
 		final Side takerSide = side.opposite();
-		final long maxQuantity = positionLookup.getMaxPossibleFillWithoutExceedingMax(assetPair, takerSide, price);
+		final long maxQuantity = assetPositions.getMaxPossibleFillWithoutBreachingRiskLimits(assetPair, takerSide, price);
 		return Math.min(desiredQuantity, maxQuantity);
 	}
 

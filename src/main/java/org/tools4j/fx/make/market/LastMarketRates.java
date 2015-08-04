@@ -21,25 +21,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.position;
+package org.tools4j.fx.make.market;
 
-import java.util.Set;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.asset.AssetPair;
-import org.tools4j.fx.make.asset.Currency;
-import org.tools4j.fx.make.execution.Side;
+import org.tools4j.fx.make.execution.Deal;
+import org.tools4j.fx.make.execution.Order;
+import org.tools4j.fx.make.position.MarketSnapshot;
+import org.tools4j.fx.make.position.MarketSnapshotImpl;
 
 /**
- * Information lookup for positions of multiple {@link Asset}s.
+ * Observes the market and registers deals as last market rates.
  */
-public interface PositionLookup {
-
-	long getMaxPossibleFillWithoutExceedingMax(AssetPair<?, ?> assetPair, Side orderSide, double rate);
-
-	Set<Asset> getPositionAssets();
+public class LastMarketRates implements MarketObserver {
 	
-	long getPosition(Asset asset);
-
-	Valuator getValuator(Currency valuationCurrency);
+	private final Map<AssetPair<?, ?>, Double> lastRates = new ConcurrentHashMap<>();
+	
+	@Override
+	public void onDeal(Deal deal) {
+		lastRates.put(deal.getAssetPair(), deal.getPrice());
+	}
+	
+	@Override
+	public void onOrder(Order order) {
+		//don't include orders
+	}
+	
+	public MarketSnapshot getMarketSnapshot() {
+		return new MarketSnapshotImpl(lastRates);
+	}
+	
 }

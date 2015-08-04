@@ -29,7 +29,7 @@ import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
 import org.tools4j.fx.make.execution.Side;
-import org.tools4j.fx.make.position.PositionLookup;
+import org.tools4j.fx.make.position.AssetPositions;
 
 /**
  * A simple {@link MarketMaker} for a single symbol, party and a constant
@@ -50,8 +50,8 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 	private volatile double lastBid = Double.NaN;
 	private volatile double lastAsk = Double.NaN;
 
-	public MidMarketMaker(PositionLookup positionLookup, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity) {
-		super(positionLookup, assetPair);
+	public MidMarketMaker(AssetPositions assetPositions, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity) {
+		super(assetPositions, assetPair);
 		if (spread < 0) {
 			throw new IllegalArgumentException("spread is negative: " + spread);
 		}
