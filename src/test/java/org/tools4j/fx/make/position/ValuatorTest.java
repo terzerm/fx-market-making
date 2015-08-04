@@ -37,26 +37,26 @@ import org.tools4j.fx.make.risk.RiskLimitsImpl;
  * Unit test for {@link Valuator} and {@link ValuatorImpl}.
  */
 public class ValuatorTest {
-	
+
 	private final String buyParty = "ValuatorTest.BUY";
 	private final String sellParty = "ValuatorTest.SELL";
 	private final CurrencyPair audUsd = new CurrencyPair(Currency.AUD, Currency.USD);
 	private final CurrencyPair eurUsd = new CurrencyPair(Currency.EUR, Currency.USD);
 	private final CurrencyPair eurAud = new CurrencyPair(Currency.EUR, Currency.AUD);
-	
+
 	private PositionKeeper positionKeeper;
-	
+
 	@Before
 	public void beforeEach() {
-		//risk limits
-		final RiskLimits riskLimits = RiskLimitsImpl.builder()
-				.withMaxAllowedPositionSize(Currency.AUD, 2000000)
-				.withMaxAllowedPositionSize(Currency.USD, 1500000)
-				.withMaxAllowedPositionSize(Currency.EUR, 1500000)
+		// risk limits
+		final RiskLimits riskLimits = RiskLimitsImpl.builder()//
+				.withMaxAllowedPositionSize(Currency.AUD, 2000000)//
+				.withMaxAllowedPositionSize(Currency.USD, 1500000)//
+				.withMaxAllowedPositionSize(Currency.EUR, 1500000)//
 				.build();
 		positionKeeper = new PositionKeeperImpl(riskLimits);
-		
-		//create some positions
+
+		// create some positions
 		positionKeeper.updatePosition(new DealImpl(audUsd, 0.75, 1000000, 1, buyParty, 2, sellParty), Side.BUY);
 		positionKeeper.updatePosition(new DealImpl(eurAud, 1.25, 1000000, 3, buyParty, 4, sellParty), Side.BUY);
 		positionKeeper.updatePosition(new DealImpl(eurUsd, 1.20, 500000, 5, buyParty, 6, sellParty), Side.BUY);
@@ -67,15 +67,15 @@ public class ValuatorTest {
 
 	@Test
 	public void shouldValuateInPositionCurrency() {
-		//given: market rates
+		// given: market rates
 		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder().build();
-		
-		//when: 
+
+		// when:
 		final double valAud = positionKeeper.getValuator(Currency.AUD).getValuation(Currency.AUD, marketRates);
 		final double valUsd = positionKeeper.getValuator(Currency.USD).getValuation(Currency.USD, marketRates);
 		final double valEur = positionKeeper.getValuator(Currency.EUR).getValuation(Currency.EUR, marketRates);
 
-		//then: value same as position
+		// then: value same as position
 		Assert.assertEquals("unexpected AUD position valuation", -250000, valAud, 0);
 		Assert.assertEquals("unexpected USD position valuation", -1350000, valUsd, 0);
 		Assert.assertEquals("unexpected EUR position valuation", 1500000, valEur, 0);
@@ -83,46 +83,46 @@ public class ValuatorTest {
 
 	@Test
 	public void shouldValuateInUSD() {
-		//given: market rates
-		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder()
-				.withRate(audUsd, 0.76)
-				.withRate(eurUsd, 1.22)
-				.withRate(eurAud, 1.26)
+		// given: market rates
+		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder()//
+				.withRate(audUsd, 0.76)//
+				.withRate(eurUsd, 1.22)//
+				.withRate(eurAud, 1.26)//
 				.build();
-		
-		//when:
+
+		// when:
 		final Valuator usdValuator = positionKeeper.getValuator(Currency.USD);
 		final double valAudInUsd = usdValuator.getValuation(Currency.AUD, marketRates);
 		final double valUsdInUsd = usdValuator.getValuation(Currency.USD, marketRates);
 		final double valEurInUsd = usdValuator.getValuation(Currency.EUR, marketRates);
 		final double totalUsd = usdValuator.getValuation(marketRates);
-		
-		//then: 
-		Assert.assertEquals("unexpected AUD position valuation", -250000*.76, valAudInUsd, 0);
+
+		// then:
+		Assert.assertEquals("unexpected AUD position valuation", -250000 * .76, valAudInUsd, 0);
 		Assert.assertEquals("unexpected USD position valuation", -1350000, valUsdInUsd, 0);
-		Assert.assertEquals("unexpected EUR position valuation", 1500000*1.22, valEurInUsd, 0);
+		Assert.assertEquals("unexpected EUR position valuation", 1500000 * 1.22, valEurInUsd, 0);
 		Assert.assertEquals("unexpected total position valuation", 290000, totalUsd, 0);
 	}
 
 	@Test
 	public void shouldValuateInEUR() {
-		//given: market rates
-		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder()
-				.withRate(audUsd, 0.76)
-				.withRate(eurUsd, 1.22)
-				.withRate(eurAud, 1.26)
+		// given: market rates
+		final MarketSnapshotImpl marketRates = MarketSnapshotImpl.builder()//
+				.withRate(audUsd, 0.76)//
+				.withRate(eurUsd, 1.22)//
+				.withRate(eurAud, 1.26)//
 				.build();
-		
-		//when:
+
+		// when:
 		final Valuator eurValuator = positionKeeper.getValuator(Currency.EUR);
-		final double valAudInEur= eurValuator.getValuation(Currency.AUD, marketRates);
+		final double valAudInEur = eurValuator.getValuation(Currency.AUD, marketRates);
 		final double valUsdInEur = eurValuator.getValuation(Currency.USD, marketRates);
 		final double valEurInEur = eurValuator.getValuation(Currency.EUR, marketRates);
 		final double totalEur = eurValuator.getValuation(marketRates);
-		
-		//then: 
-		Assert.assertEquals("unexpected AUD position valuation", -250000/1.26, valAudInEur, 0);
-		Assert.assertEquals("unexpected USD position valuation", -1350000/1.22, valUsdInEur, 0);
+
+		// then:
+		Assert.assertEquals("unexpected AUD position valuation", -250000 / 1.26, valAudInEur, 0);
+		Assert.assertEquals("unexpected USD position valuation", -1350000 / 1.22, valUsdInEur, 0);
 		Assert.assertEquals("unexpected EUR position valuation", 1500000, valEurInEur, 0);
 		Assert.assertEquals("unexpected total position valuation", 195029.92, totalEur, 1e-2);
 	}

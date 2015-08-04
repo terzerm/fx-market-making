@@ -23,11 +23,12 @@
  */
 package org.tools4j.fx.make.position;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.tools4j.fx.make.asset.Currency;
@@ -37,114 +38,120 @@ import org.tools4j.fx.make.asset.CurrencyPair;
  * Unit test for {@link MarketSnapshot} and {@link MarketSnapshotImpl}.
  */
 public class MarketSnapshotTest {
-	
+
 	private PairAndRate[] pairsAndRates;
-	private MarketSnapshot marketSnapshot;
-	
+	private MarketSnapshot snapshot;
+
 	@Before
 	public void beforeEach() {
-		//test data
-		pairsAndRates = new PairAndRate[] {
-				new PairAndRate(Currency.AUD, Currency.USD, 0.7307),
-				new PairAndRate(Currency.AUD, Currency.NZD, 1.1081),
-				new PairAndRate(Currency.EUR, Currency.USD, 1.1010),
-				new PairAndRate(Currency.USD, Currency.JPY, 123.92),
-				new PairAndRate(Currency.USD, Currency.CAD, 1.3089),
+		// test data
+		pairsAndRates = new PairAndRate[] { //
+				new PairAndRate(Currency.AUD, Currency.USD, 0.7307), //
+				new PairAndRate(Currency.AUD, Currency.NZD, 1.1081), //
+				new PairAndRate(Currency.EUR, Currency.USD, 1.1010), //
+				new PairAndRate(Currency.USD, Currency.JPY, 123.92), //
+				new PairAndRate(Currency.USD, Currency.CAD, 1.3089),//
 		};
-		//construct MarketSnapshot
+		// construct MarketSnapshot
 		final Map<CurrencyPair, Double> rates = new LinkedHashMap<>();
 		for (final PairAndRate pairAndRate : pairsAndRates) {
 			rates.put(pairAndRate.currencyPair, pairAndRate.rate);
 		}
-		this.marketSnapshot = new MarketSnapshotImpl(rates);
+		this.snapshot = new MarketSnapshotImpl(rates);
 	}
 
 	@Test
 	public void shouldFindSelfRate() {
-		//given
+		// given
 		final MarketSnapshotImpl emptyRates = new MarketSnapshotImpl(Collections.emptyMap());
-		
-		//when + then
+
+		// when + then
 		for (final Currency currency : Currency.values()) {
-			//when
+			// when
 			final double rate = emptyRates.getRate(currency, currency);
-			//then
-			Assert.assertEquals("self-rate should be 1", 1.0, rate, 0.0);
-			//when
-			final double again = marketSnapshot.getRate(currency, currency);
-			//then
-			Assert.assertEquals("self-rate should be 1", 1.0, again, 0.0);
+			// then
+			assertEquals("self-rate should be 1", 1.0, rate, 0.0);
+			// when
+			final double again = snapshot.getRate(currency, currency);
+			// then
+			assertEquals("self-rate should be 1", 1.0, again, 0.0);
 		}
 	}
 
 	@Test
 	public void shouldFindSingleDirectAndIndirectRate() {
-		//given
+		// given
 		final CurrencyPair audUsd = new CurrencyPair(Currency.AUD, Currency.USD);
 		final double rate = 0.7307;
 		final MarketSnapshotImpl rates = new MarketSnapshotImpl(Collections.singletonMap(audUsd, rate));
-		
-		//when
+
+		// when
 		final double direct = rates.getRate(Currency.AUD, Currency.USD);
-		//then
-		Assert.assertEquals("unexpected direct rate" , rate, direct, 0.0);
-		//when
+		// then
+		assertEquals("unexpected direct rate", rate, direct, 0.0);
+		// when
 		final double indirect = rates.getRate(Currency.USD, Currency.AUD);
-		//then
-		Assert.assertEquals("unexpected indirect rate" , 1/rate, indirect, 0.0);
+		// then
+		assertEquals("unexpected indirect rate", 1 / rate, indirect, 0.0);
 	}
 
 	@Test
 	public void shouldFindDirectRates() {
-		//when + then
+		// when + then
 		for (final PairAndRate pairAndRate : pairsAndRates) {
-			//when
-			final double direct = marketSnapshot.getRate(pairAndRate.currencyPair.getBase(), pairAndRate.currencyPair.getTerms());
-			//then
-			Assert.assertEquals("unexpected direct rate for " + pairAndRate.currencyPair , pairAndRate.rate, direct, 0.0);
+			// when
+			final double direct = snapshot.getRate(pairAndRate.currencyPair.getBase(),
+					pairAndRate.currencyPair.getTerms());
+			// then
+			assertEquals("unexpected direct rate for " + pairAndRate.currencyPair, pairAndRate.rate, direct, 0.0);
 		}
 	}
-	
+
 	@Test
 	public void shouldFindIndirectRates() {
-		//when + then
+		// when + then
 		for (final PairAndRate pairAndRate : pairsAndRates) {
-			//when
-			final double indirect = marketSnapshot.getRate(pairAndRate.currencyPair.getTerms(), pairAndRate.currencyPair.getBase());
-			//then
-			Assert.assertEquals("unexpected indirect rate for " + pairAndRate.currencyPair , 1/pairAndRate.rate, indirect, 0.0);
+			// when
+			final double indirect = snapshot.getRate(pairAndRate.currencyPair.getTerms(),
+					pairAndRate.currencyPair.getBase());
+			// then
+			assertEquals("unexpected indirect rate for " + pairAndRate.currencyPair, 1 / pairAndRate.rate, indirect,
+					0.0);
 		}
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void shouldThrowExceptionIfRateNotFound() {
-		//when
-		marketSnapshot.getRate(Currency.USD, Currency.CHF);
-		//then: exception
+		// when
+		snapshot.getRate(Currency.USD, Currency.CHF);
+		// then: exception
 	}
 
 	@Test(expected = NullPointerException.class)
 	public void shouldThrowExceptionForNullAsset1() {
-		//when
-		marketSnapshot.getRate(null, Currency.USD);
-		//then: exception
+		// when
+		snapshot.getRate(null, Currency.USD);
+		// then: exception
 	}
+
 	@Test(expected = NullPointerException.class)
 	public void shouldThrowExceptionForNullAsset2() {
-		//when
-		marketSnapshot.getRate(Currency.USD, null);
-		//then: exception
+		// when
+		snapshot.getRate(Currency.USD, null);
+		// then: exception
 	}
+
 	@Test(expected = NullPointerException.class)
 	public void shouldThrowExceptionForNullRateInRatesMap() {
-		//when
-		new MarketSnapshotImpl(Collections.singletonMap(new CurrencyPair(Currency.AUD, Currency.USD), (Double)null));
-		//then: exception
+		// when
+		new MarketSnapshotImpl(Collections.singletonMap(new CurrencyPair(Currency.AUD, Currency.USD), (Double) null));
+		// then: exception
 	}
 
 	private static final class PairAndRate {
 		public final CurrencyPair currencyPair;
 		public final double rate;
+
 		public PairAndRate(Currency base, Currency terms, double rate) {
 			this.currencyPair = new CurrencyPair(base, terms);
 			this.rate = rate;
