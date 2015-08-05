@@ -30,30 +30,36 @@ import org.tools4j.fx.make.asset.Asset;
  */
 public interface RiskLimits {
 	/**
-	 * The maximum positions size for the specified asset, never negative
+	 * Returns the maximum positions size for the specified asset, -1 if the
+	 * size is unlimited and a non-negative number otherwise.
 	 * 
 	 * @param asset
 	 *            the asset of interest
 	 * @return the absolute max position size for the given asset, not negative
+	 *         unless unlimited (-1)
 	 */
 	long getMaxAllowedPositionSize(Asset asset);
-	
-	RiskLimits UNLIMITED = (a -> Long.MAX_VALUE);
+
+	/**
+	 * Unlimited risk limits for all assets.
+	 */
+	RiskLimits UNLIMITED = (a -> -1L);
 
 	/**
 	 * Builder for {@link RiskLimits} which are immutable;
 	 */
 	interface Builder {
 		/**
-		 * The maximum positions size for the specified asset, never negative
+		 * The maximum positions size for the specified asset, non-negative
+		 * except -1 for unlimited.
 		 * 
 		 * @param asset
 		 *            the asset of interest
 		 * @param maxPositionSize
-		 *            the absolute max position size for the given asset, not
-		 *            negative
+		 *            the absolute max position size for the given asset,
+		 *            non-negative unless unlimited (-1)
 		 * @throws IllegalArgumentException
-		 *             if size is negative
+		 *             if {@code maxPositionSize < -1}
 		 * @throws NullPointerException
 		 *             if asset is null
 		 * @return this builder for chained method invocation

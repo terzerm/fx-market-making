@@ -66,8 +66,11 @@ public class PositionKeeperImpl implements PositionKeeper {
 		final long termsPos = getPosition(assetPair.getTerms());
 		// opposite side for base because we fill the order, i.e. we act as
 		// counter party
-		double baseQty = baseMax < Long.MAX_VALUE ? baseMax - getSignedQuantity(basePos, orderSide.opposite()) : Long.MAX_VALUE;
-		double termsQty = termsMax < Long.MAX_VALUE ? termsMax - getSignedQuantity(termsPos, orderSide) : Long.MAX_VALUE;
+		final long baseQty = baseMax >= 0 ? baseMax - getSignedQuantity(basePos, orderSide.opposite()) : -1;
+		final long termsQty = termsMax >= 0 ? termsMax - getSignedQuantity(termsPos, orderSide) : -1;
+		if (baseQty < 0 | termsQty < 0) {
+			return baseQty < 0 ? termsQty : baseQty;
+		}
 		return (long) (baseQty * rate <= termsQty ? baseQty : termsQty / rate);
 	}
 
@@ -78,7 +81,7 @@ public class PositionKeeperImpl implements PositionKeeper {
 		final AssetPair<?, ?> assetPair = deal.getAssetPair();
 		final long dealQty = deal.getQuantity();
 		final long maxQty = getMaxPossibleFillWithoutBreachingRiskLimits(assetPair, side.opposite(), deal.getPrice());
-		if (dealQty > maxQty) {
+		if (maxQty >= 0 & dealQty > maxQty) {
 			throw new IllegalArgumentException(
 					"deal would breach risk limits: " + dealQty + " > " + maxQty + " for " + deal);
 		}

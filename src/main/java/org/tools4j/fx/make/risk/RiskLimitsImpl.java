@@ -41,7 +41,7 @@ public class RiskLimitsImpl implements RiskLimits {
 	}
 	public long getMaxAllowedPositionSize(Asset asset) {
 		final Long masPositionSize = maxPositionSizeByAsset.get(asset);
-		return masPositionSize == null ? 0 : masPositionSize.longValue();
+		return masPositionSize == null ? -1 : masPositionSize.longValue();
 	}
 	
 	@Override
@@ -60,10 +60,14 @@ public class RiskLimitsImpl implements RiskLimits {
 		@Override
 		public Builder withMaxAllowedPositionSize(Asset asset, long maxPositionSize) {
 			Objects.requireNonNull(asset, "asset is null");
-			if (maxPositionSize < 0) {
-				throw new IllegalArgumentException("max position size is negative: " + maxPositionSize);
+			if (maxPositionSize < -1) {
+				throw new IllegalArgumentException("max position size is < -1: " + maxPositionSize);
 			}
-			maxPositionSizeByAsset.put(asset, maxPositionSize);
+			if (maxPositionSize == -1) {
+				maxPositionSizeByAsset.remove(asset);
+			} else {
+				maxPositionSizeByAsset.put(asset, maxPositionSize);
+			}
 			return this;
 		}
 
