@@ -100,10 +100,12 @@ public class MatchingEngineImpl implements MatchingEngine {
 				long bidQty = matchQty; 
 				long askQty = matchQty; 
 				if (bidState != null) {
-					bidQty = Math.min(matchQty, bidState.getAssetPositions().getMaxPossibleFillWithoutBreachingRiskLimits(bid.getAssetPair(), Side.BUY, midRate));
+					final long maxBid = bidState.getAssetPositions().getMaxPossibleFillWithoutBreachingRiskLimits(bid.getAssetPair(), Side.BUY, midRate);
+					bidQty = maxBid >= 0 ? Math.min(matchQty, maxBid) : matchQty;
 				}
 				if (askState != null) {
-					askQty = Math.min(matchQty, askState.getAssetPositions().getMaxPossibleFillWithoutBreachingRiskLimits(ask.getAssetPair(), Side.SELL, midRate)); 
+					final long maxAsk = askState.getAssetPositions().getMaxPossibleFillWithoutBreachingRiskLimits(ask.getAssetPair(), Side.SELL, midRate);
+					askQty = maxAsk >= 0 ? Math.min(matchQty, maxAsk) : matchQty;
 				}
 				if (bidQty != 0 & askQty != 0) {
 					//match

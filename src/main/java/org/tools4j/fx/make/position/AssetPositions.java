@@ -52,6 +52,8 @@ public interface AssetPositions {
 	 * "AUD/USD --  SELL" checks by how much the AUD position can be reduced and
 	 * by how much the USD position can be increased without breaching risk
 	 * limits.
+	 * <p>
+	 * Returns -1 if the maximum possible position size is unlimited.
 	 * 
 	 * @param assetPair
 	 *            the asset pair to check
@@ -59,8 +61,8 @@ public interface AssetPositions {
 	 *            the order side to be filled (acting as counter party)
 	 * @param rate
 	 *            the rate for transformation of base to terms asset
-	 * @return the maximum possible position; non-negative, zero if no fill is
-	 *         possible
+	 * @return the maximum possible position; zero if no fill is possible, -1 if
+	 *         unlimited and non-negative otherwise
 	 */
 	long getMaxPossibleFillWithoutBreachingRiskLimits(AssetPair<?, ?> assetPair, Side orderSide, double rate);
 
