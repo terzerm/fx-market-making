@@ -38,6 +38,7 @@ import org.tools4j.fx.make.risk.RiskLimitsImpl;
  */
 public class ValuatorTest {
 
+	private static final double TOLERANCE = 0;
 	private final String buyParty = "ValuatorTest.BUY";
 	private final String sellParty = "ValuatorTest.SELL";
 	private final CurrencyPair audUsd = new CurrencyPair(Currency.AUD, Currency.USD);
@@ -60,9 +61,9 @@ public class ValuatorTest {
 		positionKeeper.updatePosition(new DealImpl(audUsd, 0.75, 1000000, 1, buyParty, 2, sellParty), Side.BUY);
 		positionKeeper.updatePosition(new DealImpl(eurAud, 1.25, 1000000, 3, buyParty, 4, sellParty), Side.BUY);
 		positionKeeper.updatePosition(new DealImpl(eurUsd, 1.20, 500000, 5, buyParty, 6, sellParty), Side.BUY);
-		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD));
-		Assert.assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD));
-		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR));
+		Assert.assertEquals("unexpected AUD position", -250000, positionKeeper.getPosition(Currency.AUD), TOLERANCE);
+		Assert.assertEquals("unexpected USD position", -1350000, positionKeeper.getPosition(Currency.USD), TOLERANCE);
+		Assert.assertEquals("unexpected EUR position", 1500000, positionKeeper.getPosition(Currency.EUR), TOLERANCE);
 	}
 
 	@Test

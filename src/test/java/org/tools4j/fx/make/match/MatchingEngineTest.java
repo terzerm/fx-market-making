@@ -27,20 +27,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.asset.CurrencyPair;
 import org.tools4j.fx.make.execution.Order;
 import org.tools4j.fx.make.execution.OrderImpl;
 import org.tools4j.fx.make.execution.Side;
-import org.tools4j.fx.make.market.ListOrderFlow;
+import org.tools4j.fx.make.flow.ListOrderFlow;
+import org.tools4j.fx.make.flow.OrderFlow;
 import org.tools4j.fx.make.market.MarketPrinter;
-import org.tools4j.fx.make.market.OrderFlow;
 
 /**
  * Unit test for {@link MatchingEngine} and {@link MatchingEngineImpl}.
  */
 public class MatchingEngineTest {
+	
+	@Rule
+	public final TestName testName = new TestName();
 
 	private final MarketPrinter printer = new MarketPrinter();
 	private final CurrencyPair audUsd = CurrencyPair.toMarketConvention(Currency.AUD);
@@ -82,15 +87,15 @@ public class MatchingEngineTest {
 		// then
 		Assert.assertEquals("unexpected match index", 1, state.getMatchIndex());
 		Assert.assertEquals("unexpected party size", 3, state.getParties().size());
-		Assert.assertEquals("unexpected position size", 1000000, getPosition(state, "ANZ", Currency.AUD));
+		Assert.assertEquals("unexpected position size", 1000000, getPosition(state, "ANZ", Currency.AUD), 0);
 		Assert.assertEquals("unexpected position size", -1000000 * .7133, getPosition(state, "ANZ", Currency.USD), 0);
-		Assert.assertEquals("unexpected position size", -2000000, getPosition(state, "UBS", Currency.AUD));
+		Assert.assertEquals("unexpected position size", -2000000, getPosition(state, "UBS", Currency.AUD), 0);
 		Assert.assertEquals("unexpected position size", 2000000 * .71335, getPosition(state, "UBS", Currency.USD), 0);
 		Assert.assertEquals("unexpected position size", 1000000, getPosition(state, "CS", Currency.AUD), 0);
 		Assert.assertEquals("unexpected position size", -1000000 * .7134, getPosition(state, "CS", Currency.USD), 0);
 	}
 
-	private static final long getPosition(MatchingEngine.MatchingState state, String party, Currency ccy) {
+	private static final double getPosition(MatchingEngine.MatchingState state, String party, Currency ccy) {
 		return state.getPartyState(party).getAssetPositions().getPosition(ccy);
 	}
 }

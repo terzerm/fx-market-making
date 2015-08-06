@@ -21,42 +21,29 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package org.tools4j.fx.make.market;
+package org.tools4j.fx.make.util;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import static org.junit.Assert.assertEquals;
 
-import org.tools4j.fx.make.execution.Order;
-import org.tools4j.fx.make.flow.OrderFlow;
+import org.junit.Test;
 
 /**
- * A {@link OrderFlow} composite of multiple underlying flows. Provides an easy
- * way to construct a single multiply asset-pair flow from single-asset-pair
- * flows.
+ * Unit test for {@link StringUtil}.
  */
-public class CompositeOrderFlow implements OrderFlow {
-
-	protected final OrderFlow[] orderFlows;
-
-	public CompositeOrderFlow(OrderFlow... orderFlows) {
-		this.orderFlows = Arrays.copyOf(orderFlows, orderFlows.length);
-		if (Arrays.stream(orderFlows).anyMatch(x -> x == null)) {
-			throw new IllegalArgumentException("at least one element in array is null: " + Arrays.toString(orderFlows));
-		}
-	}
-
-	public CompositeOrderFlow(Collection<? extends OrderFlow> orderFlows) {
-		this(orderFlows.toArray(new OrderFlow[orderFlows.size()]));
-	}
-
-	@Override
-	public List<Order> nextOrders() {
-		final ArrayList<Order> orders = new ArrayList<>();
-		for (final OrderFlow orderFlow : orderFlows) {
-			orders.addAll(orderFlow.nextOrders());
-		}
-		return orders;
+public class StringUtilTest {
+	@Test
+	public void shouldFormatQuantity() {
+		assertEquals("0M", StringUtil.formatQuantity(0));
+		assertEquals("1M", StringUtil.formatQuantity(1000000));
+		assertEquals("2M", StringUtil.formatQuantity(2000000));
+		assertEquals("9M", StringUtil.formatQuantity(9000000));
+		assertEquals("1.2M", StringUtil.formatQuantity(1200000));
+		assertEquals("1.9M", StringUtil.formatQuantity(1900000));
+		assertEquals("2.4M", StringUtil.formatQuantity(2400000));
+		assertEquals("2.8M", StringUtil.formatQuantity(2800000));
+		assertEquals("2.41M", StringUtil.formatQuantity(2410000));
+		assertEquals("2.82M", StringUtil.formatQuantity(2820000));
+		assertEquals("3.412M", StringUtil.formatQuantity(3412000));
+		assertEquals("5.825M", StringUtil.formatQuantity(5825000));
 	}
 }

@@ -49,6 +49,8 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 	private final long maxQuantity;
 	private volatile double lastBid = Double.NaN;
 	private volatile double lastAsk = Double.NaN;
+	private volatile int bidsUpdatesSinceLast = 1; 
+	private volatile int asksUpdatesSinceLast = 1; 
 
 	public MidMarketMaker(AssetPositions assetPositions, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity) {
 		super(assetPositions, assetPair);
@@ -82,6 +84,22 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 			return Double.isNaN(mid) ? Double.POSITIVE_INFINITY : mid + spread / 2;
 		}
 	}
+	
+	@Override
+	protected Order nextOrder(Side side) {
+		if (side == Side.BUY) {
+			if (bidsUpdatesSinceLast == 0) {
+				return null;
+			}
+			bidsUpdatesSinceLast = 0;
+		} else {
+			if (asksUpdatesSinceLast == 0) {
+				return null;
+			}
+			asksUpdatesSinceLast = 0;
+		}
+		return super.nextOrder(side);
+	}
 
 	public double getMid() {
 		return (lastBid + lastAsk) / 2;
@@ -89,10 +107,14 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 
 	@Override
 	public void onOrder(Order order) {
-		if (order.getSide() == Side.BUY) {
-			lastBid = order.getPrice();
-		} else {
-			lastAsk = order.getPrice();
+		if (!party.equals(order.getParty())) {
+			if (order.getSide() == Side.BUY) {
+				lastBid = order.getPrice();
+				bidsUpdatesSinceLast++; 
+			} else {
+				lastAsk = order.getPrice();
+				asksUpdatesSinceLast++; 
+			}
 		}
 	}
 
@@ -100,6 +122,8 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 	public void onDeal(Deal deal) {
 		lastBid = deal.getPrice();
 		lastAsk = deal.getPrice();
+		bidsUpdatesSinceLast++; 
+		asksUpdatesSinceLast++; 
 	}
 
 }

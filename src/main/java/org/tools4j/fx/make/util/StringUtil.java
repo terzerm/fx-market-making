@@ -55,12 +55,12 @@ public class StringUtil {
 				return String.valueOf(thousands / 1000) + "M";
 			}
 			if ((thousands % 100) == 0) {
-				return String.format("%0.1fM", (quantity / 1000d));
+				return String.format("%.1fM", (thousands / 1000d));
 			}
 			if ((thousands % 10) == 0) {
-				return String.format("%0.2fM", (quantity / 1000d));
+				return String.format("%.2fM", (thousands / 1000d));
 			}
-			return String.format("%0.3fM", (quantity / 1000d));
+			return String.format("%.3fM", (thousands / 1000d));
 		}
 		return String.valueOf(quantity);
 	}

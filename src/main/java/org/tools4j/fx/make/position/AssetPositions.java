@@ -81,7 +81,7 @@ public interface AssetPositions {
 	 *            the asset
 	 * @return the position for the given asset
 	 */
-	long getPosition(Asset asset);
+	double getPosition(Asset asset);
 
 	/**
 	 * Returns a valuator object for this {@code AssetPositions} object and the

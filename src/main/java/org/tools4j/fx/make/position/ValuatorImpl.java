@@ -64,7 +64,7 @@ public class ValuatorImpl implements Valuator {
 	public double getValuation(Asset asset, MarketSnapshot marketSnapshot) {
 		Objects.requireNonNull(asset, "asset is null");
 		Objects.requireNonNull(marketSnapshot, "marketSnapshot is null");
-		final long position = assetPositions.getPosition(asset);
+		final double position = assetPositions.getPosition(asset);
 		if (position == 0) {
 			return 0;
 		}

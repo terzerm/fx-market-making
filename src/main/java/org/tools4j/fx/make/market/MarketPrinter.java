@@ -29,6 +29,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
@@ -39,6 +40,13 @@ import org.tools4j.fx.make.execution.Order;
 public class MarketPrinter implements MarketObserver {
 	
 	private final PrintStream printStream;
+	private final AtomicReference<Mode> mode = new AtomicReference<>(Mode.ORDERS_AND_DEALS);
+	
+	public enum Mode {
+		ORDERS,//
+		DEALS,//
+		ORDERS_AND_DEALS;
+	}
 	
 	public MarketPrinter() {
 		this(System.out);
@@ -53,14 +61,22 @@ public class MarketPrinter implements MarketObserver {
 		this.printStream = Objects.requireNonNull(printStream, "printStream is null");
 	}
 	
+	public void setMode(Mode mode) {
+		this.mode.set(Objects.requireNonNull(mode, "mode is null"));
+	}
+	
 	@Override
 	public void onOrder(Order order) {
-		printStream.println("ORDER:\t" + order.toShortString());
+		if (mode.get() != Mode.DEALS) {
+			printStream.println("ORDER:\t" + order.toShortString() + "\t(" + order.getParty() + ")");
+		}
 	}
 
 	@Override
 	public void onDeal(Deal deal) {
-		printStream.println("DEAL:\t" + deal.toShortString() + "\t(" + deal.getBuyParty() + " <--> " + deal.getSellParty() + ")");
+		if (mode.get() != Mode.ORDERS) {
+			printStream.println("DEAL:\t" + deal.toShortString() + "\t(" + deal.getBuyParty() + " <--> " + deal.getSellParty() + ")");
+		}
 	}
 
 }
