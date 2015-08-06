@@ -45,9 +45,11 @@ public class CurrencyPair extends AbstractAssetPair<Currency, Currency> {
 	public CurrencyPair(Currency base, Currency terms) {
 		super(base, terms);
 	}
+
 	public static CurrencyPair toMarketConvention(Currency currency) {
 		return toMarketConvention(currency, Currency.USD);
 	}
+
 	public static CurrencyPair toMarketConvention(Currency currency1, Currency currency2) {
 		final int index1 = precedence(currency1);
 		final int index2 = precedence(currency2);
@@ -65,6 +67,16 @@ public class CurrencyPair extends AbstractAssetPair<Currency, Currency> {
 	private static int precedence(Currency currency) {
 		final int index = PRECEDENCE.indexOf(currency);
 		return index >= 0 ? index : Integer.MAX_VALUE;
+	}
+
+	/**
+	 * Returns the 6-chars string, such as "AUDUSD" instead of to-strings
+	 * "AUD/USD" version.
+	 * 
+	 * @return the currency pair symbol without dash
+	 */
+	public String toSixCharString() {
+		return getBase().toString() + getTerms().toString();
 	}
 
 }

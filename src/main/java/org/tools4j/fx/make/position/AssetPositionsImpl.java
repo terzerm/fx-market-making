@@ -60,7 +60,7 @@ public class AssetPositionsImpl implements AssetPositions {
 	}
 
 	@Override
-	public long getPosition(Asset asset) {
+	public double getPosition(Asset asset) {
 		return positionKeeper.getPosition(asset);
 	}
 
@@ -81,7 +81,7 @@ public class AssetPositionsImpl implements AssetPositions {
 			}
 			
 			@Override
-			public long getPosition(Asset asset) {
+			public double getPosition(Asset asset) {
 				return 0;
 			}
 			
@@ -99,4 +99,8 @@ public class AssetPositionsImpl implements AssetPositions {
 		};
 	}
 
+	@Override
+	public String toString() {
+		return PositionKeeperImpl.toString(getClass().getSimpleName(), positionKeeper);
+	}
 }

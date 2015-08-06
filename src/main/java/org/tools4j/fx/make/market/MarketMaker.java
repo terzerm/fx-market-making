@@ -26,6 +26,7 @@ package org.tools4j.fx.make.market;
 import java.util.Set;
 
 import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.flow.OrderFlow;
 
 /**
  * A market maker is an {@link OrderFlow} as he provides a stream of making

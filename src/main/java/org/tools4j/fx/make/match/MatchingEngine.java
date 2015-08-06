@@ -27,10 +27,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.execution.Deal;
+import org.tools4j.fx.make.flow.OrderFlow;
 import org.tools4j.fx.make.market.LastMarketRates;
+import org.tools4j.fx.make.market.MarketMaker;
 import org.tools4j.fx.make.market.MarketObserver;
-import org.tools4j.fx.make.market.OrderFlow;
 import org.tools4j.fx.make.position.AssetPositions;
 import org.tools4j.fx.make.position.MarketSnapshot;
 import org.tools4j.fx.make.risk.RiskLimits;
@@ -107,10 +109,12 @@ public interface MatchingEngine {
 	interface Builder {
 		Builder addOrderFlow(OrderFlow orderFlow);
 
+		Builder addMarketMaker(MarketMaker marketMaker);
+
 		Builder setRiskLimits(String party, RiskLimits riskLimits);
 
 		Builder addMarketObserver(MarketObserver marketObserver);
-		
+
 		MatchingEngine build();
 	}
 
@@ -206,10 +210,30 @@ public interface MatchingEngine {
 		AssetPositions getAssetPositions();
 
 		/**
+		 * Returns the highest position that was ever reached for the specified
+		 * asset.
+		 * 
+		 * @param asset
+		 *            the asset whose high watermark to return
+		 * @return the highest position seen for this asset, never negative
+		 */
+		double getHighWaterMark(Asset asset);
+
+		/**
+		 * Returns the lowest position that was ever reached for the specified
+		 * asset.
+		 * 
+		 * @param asset
+		 *            the asset whose low watermark to return
+		 * @return the lowest position seen for this asset, never positive
+		 */
+		double getLowWaterMark(Asset asset);
+
+		/**
 		 * Returns the number of deals that this party was involved in
 		 * 
 		 * @return the number of deals where this party was taking part
 		 */
-		long getDealCountFor();
+		long getDealCount();
 	}
 }

@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.DealImpl;
@@ -45,15 +46,15 @@ import org.tools4j.fx.make.execution.Order;
 import org.tools4j.fx.make.execution.OrderImpl;
 import org.tools4j.fx.make.execution.OrderPriceComparator;
 import org.tools4j.fx.make.execution.Side;
+import org.tools4j.fx.make.flow.OrderFlow;
 import org.tools4j.fx.make.market.CompositeOrderFlow;
 import org.tools4j.fx.make.market.LastMarketRates;
+import org.tools4j.fx.make.market.MarketMaker;
 import org.tools4j.fx.make.market.MarketObserver;
-import org.tools4j.fx.make.market.OrderFlow;
 import org.tools4j.fx.make.position.AssetPositions;
 import org.tools4j.fx.make.position.AssetPositionsImpl;
+import org.tools4j.fx.make.position.HighWaterMarkPositionKeeper;
 import org.tools4j.fx.make.position.MarketSnapshot;
-import org.tools4j.fx.make.position.PositionKeeper;
-import org.tools4j.fx.make.position.PositionKeeperImpl;
 import org.tools4j.fx.make.risk.RiskLimits;
 
 public class MatchingEngineImpl implements MatchingEngine {
@@ -151,12 +152,12 @@ public class MatchingEngineImpl implements MatchingEngine {
 
 	private class PartyStateImpl implements PartyState {
 		private final String party;
-		private final PositionKeeper positionKeeper;
+		private final HighWaterMarkPositionKeeper positionKeeper;
 		private final AtomicLong dealCount = new AtomicLong();
 
 		public PartyStateImpl(String party, RiskLimits riskLimits) {
 			this.party = Objects.requireNonNull(party, "party is null");
-			this.positionKeeper = new PositionKeeperImpl(riskLimits);
+			this.positionKeeper = new HighWaterMarkPositionKeeper(riskLimits);
 		}
 		
 		@Override
@@ -173,9 +174,19 @@ public class MatchingEngineImpl implements MatchingEngine {
 		public AssetPositions getAssetPositions() {
 			return new AssetPositionsImpl(positionKeeper);
 		}
+		
+		@Override
+		public double getHighWaterMark(Asset asset) {
+			return positionKeeper.getHighWaterMark(asset);
+		}
+		
+		@Override
+		public double getLowWaterMark(Asset asset) {
+			return positionKeeper.getLowWaterMark(asset);
+		}
 
 		@Override
-		public long getDealCountFor() {
+		public long getDealCount() {
 			return dealCount.get();
 		}
 
@@ -273,6 +284,13 @@ public class MatchingEngineImpl implements MatchingEngine {
 		public Builder addOrderFlow(OrderFlow orderFlow) {
 			Objects.requireNonNull(orderFlow, "orderFlow is null");
 			orderFlows.add(orderFlow);
+			return this;
+		}
+		@Override
+		public Builder addMarketMaker(MarketMaker marketMaker) {
+			Objects.requireNonNull(marketMaker, "marketMaker is null");
+			orderFlows.add(marketMaker);
+			marketObservers.add(marketMaker);
 			return this;
 		}
 		@Override

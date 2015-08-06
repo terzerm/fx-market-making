@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.asset.AssetPair;
@@ -45,7 +44,7 @@ import org.tools4j.fx.make.risk.RiskLimits;
 public class PositionKeeperImpl implements PositionKeeper {
 
 	private final RiskLimits riskLimits;
-	private final Map<Asset, AtomicLong> positionByAsset = new HashMap<>();
+	private final Map<Asset, Double> positionByAsset = new HashMap<>();
 
 	public PositionKeeperImpl(RiskLimits riskLimits) {
 		this.riskLimits = Objects.requireNonNull(riskLimits, "riskLimits is null");
@@ -62,14 +61,14 @@ public class PositionKeeperImpl implements PositionKeeper {
 		Objects.requireNonNull(orderSide, "orderSide is null");
 		final long baseMax = riskLimits.getMaxAllowedPositionSize(assetPair.getBase());
 		final long termsMax = riskLimits.getMaxAllowedPositionSize(assetPair.getTerms());
-		final long basePos = getPosition(assetPair.getBase());
-		final long termsPos = getPosition(assetPair.getTerms());
+		final double basePos = getPosition(assetPair.getBase());
+		final double termsPos = getPosition(assetPair.getTerms());
 		// opposite side for base because we fill the order, i.e. we act as
 		// counter party
-		final long baseQty = baseMax >= 0 ? baseMax - getSignedQuantity(basePos, orderSide.opposite()) : -1;
-		final long termsQty = termsMax >= 0 ? termsMax - getSignedQuantity(termsPos, orderSide) : -1;
+		final double baseQty = baseMax >= 0 ? baseMax - getSignedQuantity(basePos, orderSide.opposite()) : -1;
+		final double termsQty = termsMax >= 0 ? termsMax - getSignedQuantity(termsPos, orderSide) : -1;
 		if (baseQty < 0 | termsQty < 0) {
-			return baseQty < 0 ? termsQty : baseQty;
+			return (long)(baseQty < 0 ? termsQty : baseQty);
 		}
 		return (long) (baseQty * rate <= termsQty ? baseQty : termsQty / rate);
 	}
@@ -85,24 +84,23 @@ public class PositionKeeperImpl implements PositionKeeper {
 			throw new IllegalArgumentException(
 					"deal would breach risk limits: " + dealQty + " > " + maxQty + " for " + deal);
 		}
-		final long baseQty = getSignedQuantity(dealQty, side);
-		final long termsQty = getSignedQuantity(dealQty * deal.getPrice(), side.opposite());
-		getOrCreatePosition(assetPair.getBase()).addAndGet(baseQty);
-		getOrCreatePosition(assetPair.getTerms()).addAndGet(termsQty);
+		final double baseQty = getSignedQuantity(dealQty, side);
+		final double termsQty = getSignedQuantity(dealQty * deal.getPrice(), side.opposite());
+		incremetPosition(assetPair.getBase(), baseQty);
+		incremetPosition(assetPair.getTerms(), termsQty);
 	}
 
-	private static long getSignedQuantity(double quantity, Side side) {
-		final double signed = side == Side.BUY ? quantity : -quantity;
-		return (long) (signed >= 0 ? Math.ceil(signed) : Math.floor(signed));
+	private static double getSignedQuantity(double quantity, Side side) {
+		return side == Side.BUY ? quantity : -quantity;
 	}
 
-	private AtomicLong getOrCreatePosition(Asset asset) {
-		AtomicLong position = positionByAsset.get(asset);
+	private void incremetPosition(Asset asset, double increment) {
+		final Double position = positionByAsset.get(asset);
 		if (position == null) {
-			position = new AtomicLong(0);
-			positionByAsset.put(asset, position);
+			positionByAsset.put(asset, increment);
+		} else {
+			positionByAsset.put(asset, position + increment);
 		}
-		return position;
 	}
 
 	@Override
@@ -111,9 +109,9 @@ public class PositionKeeperImpl implements PositionKeeper {
 	}
 
 	@Override
-	public long getPosition(Asset asset) {
-		final AtomicLong position = positionByAsset.get(asset);
-		return position == null ? 0 : position.longValue();
+	public double getPosition(Asset asset) {
+		final Double position = positionByAsset.get(asset);
+		return position == null ? 0 : position.doubleValue();
 	}
 
 	@Override
@@ -134,5 +132,11 @@ public class PositionKeeperImpl implements PositionKeeper {
 	@Override
 	public String toString() {
 		return getClass().getSimpleName() + positionByAsset.toString();
+	}
+
+	static String toString(String prefix, PositionKeeper positionKeeper) {
+		final String s = positionKeeper.toString();
+		final int index = s.indexOf('{');
+		return prefix + (index >= 0 ? s.substring(index) : s);
 	}
 }

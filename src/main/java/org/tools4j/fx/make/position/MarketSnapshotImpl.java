@@ -26,12 +26,14 @@ package org.tools4j.fx.make.position;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 
 import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.asset.CurrencyPair;
+import org.tools4j.fx.make.util.StringUtil;
 
 /**
  * Immutable implementation of {@link MarketSnapshot}. A {@link Builder} can be used to
@@ -104,5 +106,22 @@ public class MarketSnapshotImpl implements MarketSnapshot {
 		public String toString() {
 			return "Builder@" + build();
 		}
+	}
+	
+	@Override
+	public String toString() {
+		final StringBuilder sb = new StringBuilder();
+		sb.append(getClass().getSimpleName());
+		sb.append('{');
+		boolean first = true;
+		for (final Entry<Asset, Map<Asset, Double>> e1 : marketRates.entrySet()) {
+			for (final Entry<Asset, Double> e2 : e1.getValue().entrySet()) {
+				sb.append(first ? "" : ", ");
+				sb.append(e1.getKey()).append('/').append(e2.getKey());
+				sb.append('=').append(StringUtil.formatPrice(e2.getValue()));
+			}
+		}
+		sb.append('}');
+		return sb.toString();
 	}
 }

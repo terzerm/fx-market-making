@@ -91,7 +91,7 @@ abstract public class AbstractPositionAwareMarketMaker implements MarketMaker {
 		// side is the maker side, but assetPositions expects taker side
 		final Side takerSide = side.opposite();
 		final long maxQuantity = assetPositions.getMaxPossibleFillWithoutBreachingRiskLimits(assetPair, takerSide, price);
-		return Math.min(desiredQuantity, maxQuantity);
+		return maxQuantity == -1 ? desiredQuantity : Math.min(desiredQuantity, maxQuantity);
 	}
 
 }
