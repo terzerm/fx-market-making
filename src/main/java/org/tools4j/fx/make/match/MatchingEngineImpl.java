@@ -23,18 +23,22 @@
  */
 package org.tools4j.fx.make.match;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,7 +51,6 @@ import org.tools4j.fx.make.execution.OrderImpl;
 import org.tools4j.fx.make.execution.OrderPriceComparator;
 import org.tools4j.fx.make.execution.Side;
 import org.tools4j.fx.make.flow.OrderFlow;
-import org.tools4j.fx.make.market.CompositeOrderFlow;
 import org.tools4j.fx.make.market.LastMarketRates;
 import org.tools4j.fx.make.market.MarketMaker;
 import org.tools4j.fx.make.market.MarketObserver;
@@ -59,14 +62,16 @@ import org.tools4j.fx.make.risk.RiskLimits;
 
 public class MatchingEngineImpl implements MatchingEngine {
 
+	private final Instant initialTime;
 	private final List<OrderFlow> orderFlows;
 	private final Map<String, PartyStateImpl> partyStateByParty;
 	private final List<MarketObserver> marketObservers;
 
-	public MatchingEngineImpl(List<? extends OrderFlow> orderFlows, Map<? extends String, ? extends RiskLimits> riskLimitsByParty, Collection<? extends MarketObserver> marketObservers) {
+	public MatchingEngineImpl(Instant initialTime, List<? extends OrderFlow> orderFlows, Map<? extends String, ? extends RiskLimits> riskLimitsByParty, Collection<? extends MarketObserver> marketObservers) {
 		Objects.requireNonNull(orderFlows, "orderFlows is null");
 		Objects.requireNonNull(riskLimitsByParty, "riskLimitsByParty is null");
 		Objects.requireNonNull(marketObservers, "marketObservers is null");
+		this.initialTime = Objects.requireNonNull(initialTime, "initialTime is null");
 		this.orderFlows = new ArrayList<>(orderFlows);
 		this.partyStateByParty = riskLimitsByParty.entrySet().stream()
 				.collect(Collectors.toMap(e -> e.getKey(), e -> new PartyStateImpl(e.getKey(), e.getValue())));
@@ -79,8 +84,11 @@ public class MatchingEngineImpl implements MatchingEngine {
 
 	@Override
 	public MatchingState matchFirst() {
-		final MatchingStateImpl matchingState = new MatchingStateImpl();
-		matchingState.matchNext();
+		final MatchingStateImpl matchingState = new MatchingStateImpl(initialTime);
+		if (!matchingState.nextOrderToOrderFlow.isEmpty()) {
+			return matchingState.matchNext();
+		}
+		matchingState.index.incrementAndGet();
 		return matchingState;
 	}
 
@@ -111,7 +119,8 @@ public class MatchingEngineImpl implements MatchingEngine {
 				if (bidQty != 0 & askQty != 0) {
 					//match
 					final long fillQty = Math.min(bidQty, askQty);
-					final Deal deal = new DealImpl(assetPair, midRate, fillQty, bid.getId(), bid.getParty(), ask.getId(), ask.getParty());
+					final Instant time = bid.getTime().isAfter(ask.getTime()) ? ask.getTime() : bid.getTime();
+					final Deal deal = new DealImpl(time, assetPair, midRate, fillQty, bid.getId(), bid.getParty(), ask.getId(), ask.getParty());
 					getOrCreatePartyState(bid.getParty()).registerDeal(deal, Side.BUY);
 					getOrCreatePartyState(ask.getParty()).registerDeal(deal, Side.SELL);
 					matchingState.notifyAllMarketObservers(deal);
@@ -198,9 +207,34 @@ public class MatchingEngineImpl implements MatchingEngine {
 
 	private class MatchingStateImpl implements MatchingState {
 		private final AtomicLong index = new AtomicLong(-1);
-		private final AtomicBoolean hasMore = new AtomicBoolean(true);
-		private final OrderFlow orderFlow = new CompositeOrderFlow(orderFlows);
+		private final AtomicReference<Instant> startTime = new AtomicReference<Instant>(null);
+		private final AtomicReference<Instant> endTime = new AtomicReference<Instant>(null);
+		private final NavigableMap<Order, OrderFlow> nextOrderToOrderFlow = initOrderToOrderFlowMap();
 		private final LastMarketRates lastMarketRates = new LastMarketRates();
+		
+		public MatchingStateImpl(Instant initialTime) {
+			notifyAllMarketObservers(initialTime);
+		}
+
+		@Override
+		public Instant getStartTime() {
+			return startTime.get();
+		}
+		
+		private NavigableMap<Order, OrderFlow> initOrderToOrderFlowMap() {
+			final NavigableMap<Order, OrderFlow> nextOrderToOrderFlow = new TreeMap<>(OrderFlow.COMPARATOR);
+			for (final OrderFlow orderFlow : orderFlows) {
+				if (orderFlow.tryAdvance(o -> {
+					nextOrderToOrderFlow.put(o, orderFlow);
+				}));
+			}
+			return nextOrderToOrderFlow;
+		}
+
+		@Override
+		public Instant getEndTime() {
+			return endTime.get();
+		}
 
 		@Override
 		public MarketSnapshot getMarketSnapshot() {
@@ -223,15 +257,17 @@ public class MatchingEngineImpl implements MatchingEngine {
 
 		@Override
 		public boolean hasNext() {
-			return hasMore.get();
+			return !nextOrderToOrderFlow.isEmpty();
 		}
 
 		@Override
 		public MatchingState matchNext() {
-			if (!hasMore.compareAndSet(true, false)) {
+			if (nextOrderToOrderFlow.isEmpty()) {
 				throw new NoSuchElementException("no next match");
 			}
-			final List<Order> orders = orderFlow.nextOrders();
+			final List<Order> orders = matchNextOrders();
+			this.startTime.set(orders.get(0).getTime());
+			this.endTime.set(orders.get(orders.size() - 1).getTime());
 			
 			//group by asset pair and match each group
 			final Set<AssetPair<?, ?>> assetPairs = orders.stream().map(o -> o.getAssetPair()).collect(Collectors.toSet());
@@ -240,8 +276,41 @@ public class MatchingEngineImpl implements MatchingEngine {
 				match(this, assetPair, assetOrders);
 			}
 			this.index.incrementAndGet();
-			this.hasMore.set(!orders.isEmpty());
 			return this;
+		}
+
+		private List<Order> matchNextOrders() {
+			final List<Order> orders = new ArrayList<>();
+			final Set<OrderFlow> flows = new HashSet<>();
+			while (!nextOrderToOrderFlow.isEmpty()) { 
+				final Order nextOrder = nextOrderToOrderFlow.firstKey();
+				final OrderFlow orderFlow = nextOrderToOrderFlow.get(nextOrder);
+				if (flows.contains(orderFlow)) {
+					return orders;
+				}
+				flows.add(orderFlow);
+				nextOrderToOrderFlow.remove(nextOrder);
+				Order pre = null;
+				final AtomicReference<Order> curRef = new AtomicReference<Order>(nextOrder);
+				do {
+					final Order cur = curRef.get();
+					if (pre == null || pre.getTime().equals(cur.getTime())) {
+						orders.add(cur);
+						pre = cur;
+					} else {
+						nextOrderToOrderFlow.put(cur, orderFlow);
+						break;
+					}
+				} while (orderFlow.tryAdvance(o -> {curRef.set(o);}));
+			}
+			return orders;
+		}
+
+		public void notifyAllMarketObservers(Instant initialTime) {
+			lastMarketRates.onTime(initialTime);
+			for (final MarketObserver observer : marketObservers) {
+				observer.onTime(initialTime);
+			}
 		}
 
 		public void notifyAllMarketObservers(Order order) {
@@ -268,7 +337,7 @@ public class MatchingEngineImpl implements MatchingEngine {
 		}
 		private Order getRemainingOrderOrNext(Deal deal, Order order, Iterator<Order> orders) {
 			if (deal.getQuantity() < order.getQuantity()) {
-				return new OrderImpl(order, order.getQuantity() - deal.getQuantity());
+				return new OrderImpl(order, deal.getTime(), order.getQuantity() - deal.getQuantity());
 			}
 			return notifyAndReturnNextOrderOrNull(orders);
 		}
@@ -276,10 +345,16 @@ public class MatchingEngineImpl implements MatchingEngine {
 	}
 	
 	private static class BuilderImpl implements Builder {
+		private Instant initialTime = null;
 		private final List<OrderFlow> orderFlows = new ArrayList<>();
 		private final Map<String, RiskLimits> riskLimitsByParty = new LinkedHashMap<>();
 		private final List<MarketObserver> marketObservers = new ArrayList<>();
 		
+		@Override
+		public Builder setInitialTime(Instant time) {
+			this.initialTime = time;
+			return this;
+		}
 		@Override
 		public Builder addOrderFlow(OrderFlow orderFlow) {
 			Objects.requireNonNull(orderFlow, "orderFlow is null");
@@ -309,7 +384,7 @@ public class MatchingEngineImpl implements MatchingEngine {
 		
 		@Override
 		public MatchingEngine build() {
-			return new MatchingEngineImpl(orderFlows, riskLimitsByParty, marketObservers);
+			return new MatchingEngineImpl(initialTime == null ? Instant.MIN : initialTime, orderFlows, riskLimitsByParty, marketObservers);
 		}
 		
 	}

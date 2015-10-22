@@ -23,11 +23,14 @@
  */
 package org.tools4j.fx.make.market;
 
-import java.util.Arrays;
+import java.time.Instant;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Spliterator;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.execution.Order;
@@ -48,7 +51,10 @@ abstract public class AbstractPositionAwareMarketMaker implements MarketMaker {
 
 	protected final AssetPositions assetPositions;
 	protected final AssetPair<?, ?> assetPair;
-
+	
+	private final AtomicReference<Side> nextSide = new AtomicReference<Side>(Side.BUY);
+	private final AtomicInteger nullOrderCount = new AtomicInteger(0);
+	
 	public AbstractPositionAwareMarketMaker(AssetPositions assetPositions, AssetPair<?, ?> assetPair) {
 		this.assetPositions = Objects.requireNonNull(assetPositions, "assetPositions is null");
 		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
@@ -58,36 +64,65 @@ abstract public class AbstractPositionAwareMarketMaker implements MarketMaker {
 	public Set<? extends AssetPair<?, ?>> getAssetPairs() {
 		return Collections.singleton(assetPair);
 	}
+	
+	@Override
+	public Spliterator<Order> trySplit() {
+		return null;
+	}
+	
+	@Override
+	public long estimateSize() {
+		return Long.MAX_VALUE;
+	}
 
 	@Override
-	public List<Order> nextOrders() {
-		final Order bid = nextOrder(Side.BUY);
-		final Order ask = nextOrder(Side.SELL);
-		if (bid != null & ask != null) {
-			return Arrays.asList(bid, ask);
-		} else if (bid != null) {
-			return Collections.singletonList(bid);
-		} else if (ask != null) {
-			return Collections.singletonList(ask);
+	public boolean tryAdvance(Consumer<? super Order> action) {
+		if (nullOrderCount.get() != 0) {
+			return false;
 		}
-		return Collections.emptyList();
+		final Instant time = nextTime();
+		//try up to 3 times, since this could be ASK and there is no ASK
+		//then try next round BID and there is no BID, and same round try ASK
+		Side side;
+		int nullOrders;
+		do {
+			side = nextSide();
+			final Order order = nextOrder(time, side);
+			if (order != null) {
+				action.accept(order);
+				nullOrderCount.set(0);
+				return true;
+			}
+			nullOrders = nullOrderCount.incrementAndGet();
+		} while (nullOrders < 2 || (nullOrders == 2 && side == Side.BUY));
+		return false;
 	}
-
-	protected Order nextOrder(Side side) {
-		final String party = nextParty(side);
-		final long desiredQuantity = nextQuantity(side, party);
-		final double price = nextPrice(side, party, desiredQuantity);
-		final long constrainedQuantity = nextConnstrainedQuantity(side, party, desiredQuantity, price);
-		return constrainedQuantity > 0 ? new OrderImpl(assetPair, party, side, price, constrainedQuantity) : null;
+	
+	private Side nextSide() {
+		Side side = nextSide.get();
+		while (!nextSide.compareAndSet(side, side.opposite())) {
+			side = nextSide.get();
+		}
+		return side;
 	}
+	
+	protected Order nextOrder(Instant time, Side side) {
+		final String party = nextParty(time, side);
+		final long desiredQuantity = nextQuantity(time, side, party);
+		final double price = nextPrice(time, side, party, desiredQuantity);
+		final long constrainedQuantity = nextConnstrainedQuantity(time, side, party, desiredQuantity, price);
+		return constrainedQuantity > 0 ? new OrderImpl(time, assetPair, party, side, price, constrainedQuantity) : null;
+	}
+	
+	abstract protected Instant nextTime();
 
-	abstract protected String nextParty(Side side);
+	abstract protected String nextParty(Instant time, Side side);
 
-	abstract protected long nextQuantity(Side side, String party);
+	abstract protected long nextQuantity(Instant time, Side side, String party);
 
-	abstract protected double nextPrice(Side side, String party, long desiredQuantity);
+	abstract protected double nextPrice(Instant time, Side side, String party, long desiredQuantity);
 
-	protected long nextConnstrainedQuantity(Side side, String party, long desiredQuantity, double price) {
+	protected long nextConnstrainedQuantity(Instant time, Side side, String party, long desiredQuantity, double price) {
 		// side is the maker side, but assetPositions expects taker side
 		final Side takerSide = side.opposite();
 		final long maxQuantity = assetPositions.getMaxPossibleFillWithoutBreachingRiskLimits(assetPair, takerSide, price);

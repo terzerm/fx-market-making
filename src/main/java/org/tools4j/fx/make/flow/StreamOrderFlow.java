@@ -23,37 +23,46 @@
  */
 package org.tools4j.fx.make.flow;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Spliterator;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.tools4j.fx.make.execution.Order;
 
 /**
- * An {@link OrderFlow} returning once a single list with orders
- * that have been passed to the constructor.
+ * An {@link OrderFlow} returning orders based on a stream (or collection)
+ * of orders.
  */
-public class ListOrderFlow implements OrderFlow {
+public class StreamOrderFlow implements OrderFlow {
 	
-	private final AtomicBoolean eof = new AtomicBoolean(false);
-	private final List<Order> orders;
+	private final Spliterator<Order> orders;
 	
-	public ListOrderFlow(Collection<? extends Order> orders) {
-		this.orders = new ArrayList<>(orders);
+	public StreamOrderFlow(Collection<Order> orders) {
+		this(orders.stream());
 	}
-
+	public StreamOrderFlow(Stream<Order> orders) {
+		this.orders = orders.sorted(COMPARATOR).spliterator();
+	}
+	
 	@Override
-	public List<Order> nextOrders() {
-		if (eof.compareAndSet(false, true)) {
-			return new ArrayList<>(orders);
-		}
-		return Collections.emptyList();
+	public int characteristics() {
+		return orders.characteristics() | REQUIRED_CHARACTERISTICS;
 	}
 	
-	public void reset() {
-		eof.set(false);
+	@Override
+	public long estimateSize() {
+		return orders.estimateSize();
+	}
+	
+	@Override
+	public Spliterator<Order> trySplit() {
+		return orders.trySplit();
+	}
+	
+	@Override
+	public boolean tryAdvance(Consumer<? super Order> action) {
+		return orders.tryAdvance(action);
 	}
 
 }

@@ -24,7 +24,9 @@
 package org.tools4j.fx.make.match;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,7 +36,6 @@ import java.util.Objects;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -59,7 +60,7 @@ import org.tools4j.fx.make.util.StringUtil;
 /**
  * Unit test for {@link MatchingEngine} and {@link MatchingEngineImpl}.
  */
-@Ignore//run manually
+//@Ignore//run manually
 @RunWith(Parameterized.class)
 public class MatchingEngineCsvTest {
 	
@@ -71,20 +72,21 @@ public class MatchingEngineCsvTest {
 	
 	private static final CurrencyPair[] PAIRS = {//
 			new CurrencyPair(Currency.EUR, Currency.USD),//
-			new CurrencyPair(Currency.AUD, Currency.USD),//
-			new CurrencyPair(Currency.GBP, Currency.USD),//
-			new CurrencyPair(Currency.USD, Currency.JPY),//
-			new CurrencyPair(Currency.USD, Currency.CAD),//
-			new CurrencyPair(Currency.USD, Currency.CHF)//
+//			new CurrencyPair(Currency.AUD, Currency.USD),//
+//			new CurrencyPair(Currency.GBP, Currency.USD),//
+//			new CurrencyPair(Currency.USD, Currency.JPY),//
+//			new CurrencyPair(Currency.USD, Currency.CAD),//
+//			new CurrencyPair(Currency.USD, Currency.CHF)//
 	};
 	private static final String[] DATES = {//
-			"2015.01.01_2015.01.31",//
+//			"2015.01.01_2015.01.31",//
 			"2015.02.01_2015.02.28",//
-			"2015.03.01_2015.03.31",//
-			"2015.04.01_2015.04.30",//
-			"2015.05.01_2015.05.31",//
-			"2015.06.01_2015.06.30",//
-			"2015.07.01_2015.07.31",//
+//			"2015.03.01_2015.03.31",//
+//			"2015.04.01_2015.04.30",//
+//			"2015.05.01_2015.05.31",//
+//			"2015.06.01_2015.06.30",//
+//			"2015.07.01_2015.07.31",//
+//			"2014.01.01_2014.12.31"
 	};
 	
 	private final MarketPrinter printer = new MarketPrinter();
@@ -141,19 +143,21 @@ public class MatchingEngineCsvTest {
 	}
 
 	@Test
-	public void shouldMatch() throws FileNotFoundException {
+	public void shouldMatch() throws IOException {
 		// given
 		final File file = new File(FOLDER, String.format(FILE_NAME, currencyPair.toSixCharString(), dates));
 		final Currency base = currencyPair.getBase();
 		final Currency terms = currencyPair.getTerms();
 		printer.setMode(Mode.DEALS);;
+		final Instant initialTime = CsvOrderFlow.getInitialTime(file);
 		final OrderFlow orderFlow = new CsvOrderFlow(currencyPair, file);
 		final double spread = 10 * (terms == Currency.JPY ? 0.01 : 0.0001); 
-		final MarketMaker midMarketMaker = new MidMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, MID_MARKET, spread, 1000000);
+		final MarketMaker midMarketMaker = new MidMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, MID_MARKET, spread, 1000000, Duration.ofMillis(1));
 		final MatchingEngine engine = MatchingEngineImpl.builder()//
+				.setInitialTime(initialTime)//
 				.addOrderFlow(orderFlow)//
 				.addMarketMaker(midMarketMaker)
-//				.addMarketObserver(printer)//
+				.addMarketObserver(printer)//
 				.build();
 
 		// when

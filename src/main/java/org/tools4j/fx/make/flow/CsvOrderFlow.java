@@ -29,14 +29,15 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Objects;
-import java.util.TimeZone;
+import java.util.Spliterator;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.execution.Order;
@@ -55,17 +56,13 @@ Time,Ask,Bid,AskVolume,BidVolume
  */
 public class CsvOrderFlow implements OrderFlow {
 	
-	private static final String HEADER_LINE = "Time,Ask,Bid,AskVolume,BidVolume";
-	private static final ThreadLocal<Calendar> CALENDAR = new ThreadLocal<Calendar>() {
-		protected Calendar initialValue() {
-			return Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-		}
-	};
+	public static final int CHARACTERISTICS = REQUIRED_CHARACTERISTICS | IMMUTABLE;
 	
 	private final AssetPair<?, ?> assetPair;
 	private final String party;
 	private final BufferedReader reader;
-	private final AtomicLong lineNo = new AtomicLong();
+	private final AtomicLong lineNo = new AtomicLong(0);
+	private final AtomicReference<Order> ask = new AtomicReference<Order>(null);
 	
 	public CsvOrderFlow(AssetPair<?, ?> assetPair, File file) throws FileNotFoundException {
 		this(assetPair, file.getName(), new FileReader(file));
@@ -73,23 +70,62 @@ public class CsvOrderFlow implements OrderFlow {
 	public CsvOrderFlow(AssetPair<?, ?> assetPair, String party, File file) throws FileNotFoundException {
 		this(assetPair, party, new FileReader(file));
 	}
-	public CsvOrderFlow(AssetPair<?, ?> assetPair, String party, Reader reader) {
+	private CsvOrderFlow(AssetPair<?, ?> assetPair, String party, Reader reader) {
 		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
 		this.party = Objects.requireNonNull(party, "party is null");
 		this.reader = reader instanceof BufferedReader ? (BufferedReader)reader : new BufferedReader(reader);
 	}
-
-	@Override
-	public List<Order> nextOrders() {
+	
+	public static Instant getInitialTime(File file) throws FileNotFoundException, IOException {
+		return getInitialTime(new FileReader(file));
+	}
+	
+	public static Instant getInitialTime(Reader reader) throws IOException {
+		final BufferedReader bufferedReader = reader instanceof BufferedReader ? (BufferedReader)reader : new BufferedReader(reader);
 		try {
+			bufferedReader.readLine();//header line
+			final String line = bufferedReader.readLine();
+			return parseTime(line);
+		} finally {
+			bufferedReader.close();
+		}
+	}
+	@Override
+	public int characteristics() {
+		return CHARACTERISTICS;
+	}
+	
+	@Override
+	public long estimateSize() {
+		return Long.MAX_VALUE;
+	}
+	
+	@Override
+	public Spliterator<Order> trySplit() {
+		return null;
+	}
+	
+	@Override
+	public boolean tryAdvance(Consumer<? super Order> action) {
+		try {
+			//ask from previous line
+			final Order ask = this.ask.getAndSet(null);
+			if (ask != null) {
+				action.accept(ask);
+				return true;
+			}
+			//read new line (skip header line if first line)
 			String line = readLine();
-			if (line != null && HEADER_LINE.equals(line.trim())) {
+			if (line != null & lineNo.get() == 1) {
 				line = readLine();
 			}
-			if (line != null) {
-				return parseLine(line);
+			//usually bid, but could be ask if bid qty is 0
+			final Order order = parseLine(line);
+			if (order != null) {
+				action.accept(order);
+				return true;
 			}
-			return Collections.emptyList();
+			return false;
 		} catch (Exception e) {
 			throw new RuntimeException("[line=" + lineNo + "] error reading " + assetPair + " csv file for party '" + party + "', e=" + e , e);
 		}
@@ -101,24 +137,29 @@ public class CsvOrderFlow implements OrderFlow {
 		}
 		return line;
 	}
-	private List<Order> parseLine(String line) {
-		final Date date = parseDate(line);
-		final double bid = parseRate(line, 2);
-		final double ask = parseRate(line, 1);
-		final long bidVol = parseVol(line, 4);
-		final long askVol = parseVol(line, 3);
-		if (bidVol > 0 & askVol > 0) {
-			return Arrays.asList(createOrder(Side.BUY, date, bid, bidVol), createOrder(Side.SELL, date, ask, askVol));
+	private Order parseLine(String line) throws IOException {
+		while (line != null) {
+			final Instant time = parseTime(line);
+			final double bid = parseRate(line, 2);
+			final double ask = parseRate(line, 1);
+			final long bidVol = parseVol(line, 4);
+			final long askVol = parseVol(line, 3);
+			if (bidVol > 0 & askVol > 0) {
+				this.ask.set(createOrder(Side.SELL, time, ask, askVol));
+				return createOrder(Side.BUY, time, bid, bidVol);
+			}
+			if (bidVol > 0) {
+				return createOrder(Side.BUY, time, bid, bidVol);
+			}
+			if (askVol > 0) {
+				return createOrder(Side.SELL, time, ask, askVol);
+			}
+			line = readLine();
 		}
-		if (bidVol > 0) {
-			return Collections.singletonList(createOrder(Side.BUY, date, bid, bidVol));
-		}
-		if (askVol > 0) {
-			return Collections.singletonList(createOrder(Side.SELL, date, ask, askVol));
-		}
-		return Collections.emptyList();
+		return null;
 	}
-	private static Date parseDate(String line) {
+	private static Instant parseTime(String line) {
+		//2015-07-01 11:47:19.707
 		final int yyyy = Integer.parseInt(line.substring(0, 4));
 		final int mM = Integer.parseInt(line.substring(5, 7));
 		final int dd = Integer.parseInt(line.substring(8, 10));
@@ -126,10 +167,8 @@ public class CsvOrderFlow implements OrderFlow {
 		final int mm = Integer.parseInt(line.substring(14, 16));
 		final int ss = Integer.parseInt(line.substring(17, 19));
 		final int ms = Integer.parseInt(line.substring(20, 23));
-		final Calendar cal = CALENDAR.get();
-		cal.set(yyyy, mM, dd, hh, mm, ss);
-		cal.set(Calendar.MILLISECOND, ms);
-		return cal.getTime();
+		final int ns = (int)TimeUnit.MILLISECONDS.toNanos(ms);
+		return LocalDateTime.of(yyyy, mM, dd, hh, mm, ss, ns).toInstant(ZoneOffset.UTC);
 	}
 	private static double parseRate(String line, int commasBefore) {
 		return parseDouble(line, commasBefore);
@@ -147,8 +186,8 @@ public class CsvOrderFlow implements OrderFlow {
 		}
 		return Double.parseDouble(index >= 0 ? line.substring(start, index) : line.substring(start));
 	}
-	private Order createOrder(Side side, Date date, double rate, long quantity) {
-		return new OrderImpl(assetPair, party, side, rate, quantity);
+	private Order createOrder(Side side, Instant time, double rate, long quantity) {
+		return new OrderImpl(time, assetPair, party, side, rate, quantity);
 	}
 
 }

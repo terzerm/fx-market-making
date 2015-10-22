@@ -23,6 +23,7 @@
  */
 package org.tools4j.fx.make.execution;
 
+import java.time.Instant;
 import java.util.Objects;
 
 import org.tools4j.fx.make.asset.AssetPair;
@@ -32,6 +33,7 @@ import org.tools4j.fx.make.util.StringUtil;
 public class DealImpl implements Deal {
 
 	private final long id = ID_GENERATOR.incrementAndGet();
+	private final Instant time;
 	private final AssetPair<?, ?> assetPair;
 	private final double price;
 	private final long quantity;
@@ -40,13 +42,14 @@ public class DealImpl implements Deal {
 	private final long sellOrderId;
 	private final String sellParty;
 
-	public DealImpl(AssetPair<?, ?> assetPair, double price, long quantity, long buyOrderId, String buyParty, long sellOrderId, String sellParty) {
+	public DealImpl(Instant time, AssetPair<?, ?> assetPair, double price, long quantity, long buyOrderId, String buyParty, long sellOrderId, String sellParty) {
 		if (quantity <= 0) {
 			throw new IllegalArgumentException("quantity must be positive: " + quantity);
 		}
 		if (price < 0 || Double.isNaN(price)) {
 			throw new IllegalArgumentException("invalid price: " + price);
 		}
+		this.time = Objects.requireNonNull(time, "time is null");
 		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
 		this.price = price;
 		this.quantity = quantity;
@@ -56,7 +59,8 @@ public class DealImpl implements Deal {
 		this.sellParty = Objects.requireNonNull(sellParty, "sellParty is null");
 	}
 
-	public DealImpl(double price, long quantity, Order order1, Order order2) {
+	public DealImpl(Instant time, double price, long quantity, Order order1, Order order2) {
+		Objects.requireNonNull(time, "time is null");
 		if (quantity <= 0) {
 			throw new IllegalArgumentException("quantity must be positive: " + quantity);
 		}
@@ -64,10 +68,15 @@ public class DealImpl implements Deal {
 			throw new IllegalArgumentException("invalid price: " + price);
 		}
 		if (!OrderMatcher.isMatchPossible(order1, order2)) {
-			throw new IllegalArgumentException("order match is not possible: order1=" + order1 + "order2=" + order1);
+			throw new IllegalArgumentException("order match is not possible: order1=" + order1 + "order2=" + order2);
+		}
+		if (order1.getTime().isAfter(time) | order2.getTime().isAfter(time)) {
+			throw new IllegalArgumentException("time must be at or after order time: order1.time=" + order1.getTime()
+					+ "order2=" + order2.getTime() + ", time=" + time);
 		}
 		final Order buyOrder = order1.getSide() == Side.BUY ? order1 : order2.getSide() == Side.BUY ? order2 : null;
 		final Order sellOrder = order1.getSide() == Side.SELL ? order1 : order2.getSide() == Side.SELL ? order2 : null;
+		this.time = time;// null checked above
 		this.assetPair = Objects.requireNonNull(order1.getAssetPair(), "order1.assetPair is null");
 		this.price = price;
 		this.quantity = quantity;
@@ -80,6 +89,11 @@ public class DealImpl implements Deal {
 	@Override
 	public long getId() {
 		return id;
+	}
+
+	@Override
+	public Instant getTime() {
+		return time;
 	}
 
 	@Override
@@ -123,9 +137,9 @@ public class DealImpl implements Deal {
 
 	@Override
 	public String toString() {
-		return getClass().getSimpleName() + "{id=" + id + ", assetPair=" + assetPair + ", price=" + price
-				+ ", quantity=" + quantity + ", buyOrderId=" + buyOrderId + ", buyParty=" + buyParty + ", sellOrderId="
-				+ sellOrderId + ", sellParty=" + sellParty + "}";
+		return getClass().getSimpleName() + "{id=" + id + ", time=" + time + ", assetPair=" + assetPair + ", price="
+				+ price + ", quantity=" + quantity + ", buyOrderId=" + buyOrderId + ", buyParty=" + buyParty
+				+ ", sellOrderId=" + sellOrderId + ", sellParty=" + sellParty + "}";
 	}
 
 }

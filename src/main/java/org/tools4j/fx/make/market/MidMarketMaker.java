@@ -23,6 +23,8 @@
  */
 package org.tools4j.fx.make.market;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 
 import org.tools4j.fx.make.asset.AssetPair;
@@ -47,12 +49,17 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 	private final String party;
 	private final double spread;
 	private final long maxQuantity;
+	private final Duration latency;
+	private volatile Instant time = Instant.MIN;
 	private volatile double lastBid = Double.NaN;
 	private volatile double lastAsk = Double.NaN;
-	private volatile int bidsUpdatesSinceLast = 1; 
-	private volatile int asksUpdatesSinceLast = 1; 
+	private volatile int bidUpdatesSinceLast = 1; 
+	private volatile int askUpdatesSinceLast = 1; 
 
 	public MidMarketMaker(AssetPositions assetPositions, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity) {
+		this(assetPositions, assetPair, party, spread, maxQuantity, Duration.ZERO);
+	}
+	public MidMarketMaker(AssetPositions assetPositions, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity, Duration latency) {
 		super(assetPositions, assetPair);
 		if (spread < 0) {
 			throw new IllegalArgumentException("spread is negative: " + spread);
@@ -63,20 +70,26 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 		this.party = Objects.requireNonNull(party, "party is null");
 		this.spread = spread;
 		this.maxQuantity = maxQuantity;
+		this.latency = Objects.requireNonNull(latency, "latency is null");
+	}
+	
+	@Override
+	protected Instant nextTime() {
+		return latency.isZero() ? time : time.plus(latency);
 	}
 
 	@Override
-	protected String nextParty(Side side) {
+	protected String nextParty(Instant time, Side side) {
 		return party;
 	}
 	
 	@Override
-	protected long nextQuantity(Side side, String party) {
+	protected long nextQuantity(Instant time, Side side, String party) {
 		return maxQuantity;
 	}
 	
 	@Override
-	protected double nextPrice(Side side, String party, long desiredQuantity) {
+	protected double nextPrice(Instant time, Side side, String party, long desiredQuantity) {
 		final double mid = getMid();
 		if (side == Side.BUY) {
 			return Double.isNaN(mid) ? 0 : mid - spread / 2;
@@ -86,44 +99,55 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 	}
 	
 	@Override
-	protected Order nextOrder(Side side) {
+	protected Order nextOrder(Instant time, Side side) {
 		if (side == Side.BUY) {
-			if (bidsUpdatesSinceLast == 0) {
+			if (bidUpdatesSinceLast == 0) {
 				return null;
 			}
-			bidsUpdatesSinceLast = 0;
+			bidUpdatesSinceLast = 0;
 		} else {
-			if (asksUpdatesSinceLast == 0) {
+			if (askUpdatesSinceLast == 0) {
 				return null;
 			}
-			asksUpdatesSinceLast = 0;
+			askUpdatesSinceLast = 0;
 		}
-		return super.nextOrder(side);
+		return super.nextOrder(time, side);
 	}
 
 	public double getMid() {
 		return (lastBid + lastAsk) / 2;
 	}
+	
+	@Override
+	public void onTime(Instant time) {
+		if (!time.isBefore(this.time)) {
+			this.time = time;
+		}
+	}
 
 	@Override
 	public void onOrder(Order order) {
-		if (!party.equals(order.getParty())) {
+		if (!order.getTime().isBefore(time) & !party.equals(order.getParty())) {
 			if (order.getSide() == Side.BUY) {
 				lastBid = order.getPrice();
-				bidsUpdatesSinceLast++; 
+				bidUpdatesSinceLast++; 
 			} else {
 				lastAsk = order.getPrice();
-				asksUpdatesSinceLast++; 
+				askUpdatesSinceLast++; 
 			}
+			time = order.getTime();
 		}
 	}
 
 	@Override
 	public void onDeal(Deal deal) {
-		lastBid = deal.getPrice();
-		lastAsk = deal.getPrice();
-		bidsUpdatesSinceLast++; 
-		asksUpdatesSinceLast++; 
+		if (!deal.getTime().isBefore(time)) {
+			lastBid = deal.getPrice();
+			lastAsk = deal.getPrice();
+			bidUpdatesSinceLast++; 
+			askUpdatesSinceLast++; 
+			time = deal.getTime();
+		}
 	}
 
 }

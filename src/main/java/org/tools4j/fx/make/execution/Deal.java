@@ -23,6 +23,7 @@
  */
 package org.tools4j.fx.make.execution;
 
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.tools4j.fx.make.asset.AssetPair;
@@ -40,7 +41,14 @@ public interface Deal {
 	long getId();
 
 	/**
-	 * The asset pair.
+	 * Returns the time when this deal was matched, never null.
+	 * 
+	 * @return the deal matching time
+	 */
+	Instant getTime();
+
+	/**
+	 * The asset pair, never null.
 	 * 
 	 * @return the traded asset pair
 	 */
@@ -70,7 +78,7 @@ public interface Deal {
 	long getBuyOrderId();
 
 	/**
-	 * Returns the party behind the BUY side order.
+	 * Returns the party behind the BUY side order, never null.
 	 * 
 	 * @return the buy-side party
 	 */
@@ -84,7 +92,7 @@ public interface Deal {
 	long getSellOrderId();
 
 	/**
-	 * Returns the party behind the SELL side order.
+	 * Returns the party behind the SELL side order, never null.
 	 * 
 	 * @return the sell-side party
 	 */
@@ -92,6 +100,7 @@ public interface Deal {
 
 	/**
 	 * Returns a string of the form: AUD/USD[1.2M@1.246370]
+	 * 
 	 * @return a short string with symbol, quantity and price
 	 */
 	String toShortString();

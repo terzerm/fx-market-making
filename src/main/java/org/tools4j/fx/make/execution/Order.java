@@ -23,6 +23,7 @@
  */
 package org.tools4j.fx.make.execution;
 
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.tools4j.fx.make.asset.AssetPair;
@@ -39,14 +40,21 @@ public interface Order {
 	long getId();
 
 	/**
-	 * The asset pair.
+	 * Returns the time when this order was issued, never null.
+	 * 
+	 * @return the issue time
+	 */
+	Instant getTime();
+
+	/**
+	 * The asset pair, never null.
 	 * 
 	 * @return the traded asset pair
 	 */
 	AssetPair<?, ?> getAssetPair();
 
 	/**
-	 * The party behind this order
+	 * The party behind this order, never null.
 	 * 
 	 * @return the issuing party
 	 */
@@ -72,13 +80,14 @@ public interface Order {
 	 * @return the quantity or amount, not negative
 	 */
 	long getQuantity();
-	
+
 	/**
 	 * Returns a string of the form: BUY:AUD/USD[1.2M@1.246370]
+	 * 
 	 * @return a short string with side, symbol, quantity and price
 	 */
 	String toShortString();
-	
+
 	/**
 	 * Generator for unique order ID's.
 	 */

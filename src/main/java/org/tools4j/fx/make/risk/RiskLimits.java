@@ -46,6 +46,15 @@ public interface RiskLimits {
 	RiskLimits UNLIMITED = (a -> -1L);
 
 	/**
+	 * Returns a new builder to construct {@link RiskLimits}.
+	 * 
+	 * @return a new builder
+	 */
+	static Builder builder() {
+		return RiskLimitsImpl.builder();
+	}
+
+	/**
 	 * Builder for {@link RiskLimits} which are immutable;
 	 */
 	interface Builder {

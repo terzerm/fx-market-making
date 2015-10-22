@@ -25,6 +25,8 @@ package org.tools4j.fx.make.position;
 
 import static org.junit.Assert.assertEquals;
 
+import java.time.Instant;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -205,7 +207,7 @@ public class PositionKeeperTest {
 	}
 
 	private static Deal createDeal(AssetPair<?, ?> assetPair, double price, long qty) {
-		return new DealImpl(assetPair, price, qty, Order.ID_GENERATOR.incrementAndGet(), BUY_PARTY,
+		return new DealImpl(Instant.now(), assetPair, price, qty, Order.ID_GENERATOR.incrementAndGet(), BUY_PARTY,
 				Order.ID_GENERATOR.incrementAndGet(), SELL_PARTY);
 	}
 

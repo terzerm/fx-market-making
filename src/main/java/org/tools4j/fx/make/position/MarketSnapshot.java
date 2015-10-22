@@ -34,6 +34,10 @@ public interface MarketSnapshot {
 	
 	double getRate(Asset from, Asset to);
 	
+	static Builder builder() {
+		return MarketSnapshotImpl.builder();
+	}
+	
 	interface Builder {
 		Builder withRate(AssetPair<?,?> pair, double rate);
 		Builder withRate(Currency base, Currency terms, double rate);

@@ -23,6 +23,8 @@
  */
 package org.tools4j.fx.make.market;
 
+import java.time.Instant;
+
 import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
 
@@ -30,6 +32,15 @@ import org.tools4j.fx.make.execution.Order;
  * Someone who is looking what's on in the market.
  */
 public interface MarketObserver {
+	/**
+	 * A time event occurred. At least the starting of the market causes a time
+	 * event, with time being at or before all orders in the market. 
+	 * 
+	 * @param time
+	 *            the time
+	 */
+	void onTime(Instant time);
+
 	/**
 	 * An order has been placed in the market. Only unmatched orders are seen
 	 * that do not directly lead to deals. Orders crossing the spread usually

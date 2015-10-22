@@ -23,10 +23,11 @@
  */
 package org.tools4j.fx.make.market;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
+import java.util.Spliterator;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import org.tools4j.fx.make.execution.Order;
 import org.tools4j.fx.make.flow.OrderFlow;
@@ -38,6 +39,7 @@ import org.tools4j.fx.make.flow.OrderFlow;
  */
 public class CompositeOrderFlow implements OrderFlow {
 
+	private final AtomicLong nextFlowIndex = new AtomicLong(0);  
 	protected final OrderFlow[] orderFlows;
 
 	public CompositeOrderFlow(OrderFlow... orderFlows) {
@@ -50,13 +52,40 @@ public class CompositeOrderFlow implements OrderFlow {
 	public CompositeOrderFlow(Collection<? extends OrderFlow> orderFlows) {
 		this(orderFlows.toArray(new OrderFlow[orderFlows.size()]));
 	}
+	
+	@Override
+	public Spliterator<Order> trySplit() {
+		return null;
+	}
+	
+	@Override
+	public long estimateSize() {
+		long size = 0;
+		for (final OrderFlow orderFlow : orderFlows) {
+			final long flowSize = orderFlow.estimateSize();
+			if (flowSize == Long.MAX_VALUE) {
+				return Long.MAX_VALUE;
+			}
+			size += flowSize;
+		}
+		return size;
+	}
 
 	@Override
-	public List<Order> nextOrders() {
-		final ArrayList<Order> orders = new ArrayList<>();
-		for (final OrderFlow orderFlow : orderFlows) {
-			orders.addAll(orderFlow.nextOrders());
+	public boolean tryAdvance(Consumer<? super Order> action) {
+		final int len = orderFlows.length;
+		for (int i = 0; i < len; i++) {
+			final OrderFlow flow = nextOrderFlow();
+			if (flow.tryAdvance(action)) {
+				return true;
+			}
 		}
-		return orders;
+		return false;
+	}
+
+	private OrderFlow nextOrderFlow() {
+		final long nextIndex = nextFlowIndex.getAndIncrement();
+		final int index = (int)(nextIndex % orderFlows.length);
+		return orderFlows[index];
 	}
 }

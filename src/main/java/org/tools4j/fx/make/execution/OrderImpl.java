@@ -25,6 +25,7 @@ package org.tools4j.fx.make.execution;
 
 import static org.tools4j.fx.make.util.StringUtil.formatQuantityAndPrice;
 
+import java.time.Instant;
 import java.util.Objects;
 
 import org.tools4j.fx.make.asset.AssetPair;
@@ -35,13 +36,15 @@ import org.tools4j.fx.make.asset.AssetPair;
 public class OrderImpl implements Order {
 
 	private final long id = ID_GENERATOR.incrementAndGet();
+	private final Instant time;
 	private final AssetPair<?, ?> assetPair;
 	private final String party;
 	private final Side side;
 	private final double price;
 	private final long quantity;
 
-	public OrderImpl(AssetPair<?, ?> assetPair, String party, Side side, double price, long quantity) {
+	public OrderImpl(Instant time, AssetPair<?, ?> assetPair, String party, Side side, double price, long quantity) {
+		this.time = Objects.requireNonNull(time, "time is null");
 		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
 		this.party = Objects.requireNonNull(party, "party is null");
 		this.side = Objects.requireNonNull(side, "side is null");
@@ -55,9 +58,17 @@ public class OrderImpl implements Order {
 		this.quantity = quantity;
 	}
 
-	public OrderImpl(Order order, long remainingQuantity) {
-		this(order.getAssetPair(), order.getParty(), order.getSide(), order.getPrice(),
-				validateRemainingQuantity(order, remainingQuantity));
+	public OrderImpl(Order order, Instant time, long remainingQuantity) {
+		this(validateRemainingTime(order, time), order.getAssetPair(), order.getParty(), order.getSide(),
+				order.getPrice(), validateRemainingQuantity(order, remainingQuantity));
+	}
+
+	private static Instant validateRemainingTime(Order order, Instant time) {
+		if (order.getTime().isAfter(time)) {
+			throw new IllegalArgumentException(
+					"time must be at or after order time: " + order.getTime() + " > " + time);
+		}
+		return time;
 	}
 
 	private static long validateRemainingQuantity(Order order, long remainingQuantity) {
@@ -71,6 +82,11 @@ public class OrderImpl implements Order {
 	@Override
 	public long getId() {
 		return id;
+	}
+
+	@Override
+	public Instant getTime() {
+		return time;
 	}
 
 	@Override
@@ -104,8 +120,8 @@ public class OrderImpl implements Order {
 
 	@Override
 	public String toString() {
-		return getClass().getSimpleName() + "{id=" + id + ", assetPair=" + assetPair + ", party=" + party + ", side="
-				+ side + ", price=" + price + ", quantity=" + quantity + "}";
+		return getClass().getSimpleName() + "{id=" + id + ", time=" + time + ", assetPair=" + assetPair + ", party="
+				+ party + ", side=" + side + ", price=" + price + ", quantity=" + quantity + "}";
 	}
 
 }

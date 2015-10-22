@@ -28,6 +28,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -63,6 +64,11 @@ public class MarketPrinter implements MarketObserver {
 	
 	public void setMode(Mode mode) {
 		this.mode.set(Objects.requireNonNull(mode, "mode is null"));
+	}
+	
+	@Override
+	public void onTime(Instant time) {
+		printStream.println("TIME:\t" + time);
 	}
 	
 	@Override

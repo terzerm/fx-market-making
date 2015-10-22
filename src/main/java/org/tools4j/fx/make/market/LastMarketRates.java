@@ -23,6 +23,7 @@
  */
 package org.tools4j.fx.make.market;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -42,6 +43,11 @@ public class LastMarketRates implements MarketObserver {
 	@Override
 	public void onDeal(Deal deal) {
 		lastRates.put(deal.getAssetPair(), deal.getPrice());
+	}
+	
+	@Override
+	public void onTime(Instant time) {
+		//not interested in time
 	}
 	
 	@Override

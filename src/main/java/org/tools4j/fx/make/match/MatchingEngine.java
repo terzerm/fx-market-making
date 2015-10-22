@@ -23,6 +23,7 @@
  */
 package org.tools4j.fx.make.match;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -45,7 +46,7 @@ import org.tools4j.fx.make.risk.RiskLimits;
  * registered via {@link Builder#setRiskLimits(String, RiskLimits)}
  * <p>
  * After creating an engine via {@link Builder} (see
- * {@link MatchingEngineImpl#builder()}), matching can be performed
+ * {@link MatchingEngine#builder()}), matching can be performed
  * <ul>
  * <li><b>step by step:</b> via {@link #matchFirst()} and then
  * {@link MatchingState#matchNext()} invoked on the returned matching state
@@ -101,12 +102,22 @@ public interface MatchingEngine {
 		}
 		consumer.accept(state);
 	}
+	
+	/**
+	 * Returns a new builder to construct a new {@link MatchingEngine}.
+	 * @return a new builder
+	 */
+	static Builder builder() {
+		return MatchingEngineImpl.builder();
+	}
 
 	/**
 	 * A builder to construct a {@link MatchingEngine}, returned by
-	 * {@link MatchingEngineImpl#builder()}.
+	 * {@link MatchingEngine#builder()}.
 	 */
 	interface Builder {
+		Builder setInitialTime(Instant time);
+		
 		Builder addOrderFlow(OrderFlow orderFlow);
 
 		Builder addMarketMaker(MarketMaker marketMaker);
@@ -120,11 +131,25 @@ public interface MatchingEngine {
 
 	/**
 	 * Represents the matching state with information about market rates and
-	 * positions after performing one or several rounds of order matching. A
-	 * matching round is defined by all orders returned by all order flows in a
-	 * single call to {@link OrderFlow#nextOrders()}.
+	 * positions after performing one or several rounds of order matching. 
 	 */
 	interface MatchingState {
+		/**
+		 * Returns the time when this matching state was started (the time of the 
+		 * earliest order from all feeds in this match).
+		 * 
+		 * @return this matching state's start time
+		 */
+		Instant getStartTime();
+
+		/**
+		 * Returns the time when this matching state was ended (the time of the 
+		 * latest order from all feeds in this match).
+		 * 
+		 * @return this matching state's end time
+		 */
+		Instant getEndTime();
+
 		/**
 		 * Returns a market snapshot of prices as they are captured from deals
 		 * that occurred in the market.

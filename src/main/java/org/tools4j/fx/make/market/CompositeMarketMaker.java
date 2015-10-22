@@ -23,6 +23,7 @@
  */
 package org.tools4j.fx.make.market;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -53,6 +54,13 @@ public class CompositeMarketMaker extends CompositeOrderFlow implements MarketMa
 			assetPairs.addAll(marketMaker.getAssetPairs());
 		}
 		return assetPairs;
+	}
+	
+	@Override
+	public void onTime(Instant time) {
+		for (final MarketMaker marketMaker : (MarketMaker[]) orderFlows) {
+			marketMaker.onTime(time);
+		}
 	}
 
 	@Override

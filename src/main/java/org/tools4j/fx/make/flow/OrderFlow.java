@@ -23,24 +23,45 @@
  */
 package org.tools4j.fx.make.flow;
 
-import java.util.List;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.Spliterator;
 
 import org.tools4j.fx.make.execution.Order;
 
 /**
  * Order flow is a stream of orders. This can be a market maker or an input flow
- * of client orders; it may also refer to the stream of bid/ask prices from any
- * price source.
+ * of client orders; it may also refer to the stream of bid/ask prices from a
+ * price source such as a file with historical data.
  */
-public interface OrderFlow {
+public interface OrderFlow extends Spliterator<Order> {
 	/**
-	 * Retrieve the next orders for one particular instant in time.
-	 * <p>
-	 * The returned orders need not be sorted by price and can be on either
-	 * side. An empty list means that there are no orders at the specified time.
-	 * Returning null is illegal.
-	 * 
-	 * @return a list of orders, maybe empty but never null
+	 * The characteristics required for all order flow implementations.
 	 */
-	List<Order> nextOrders();
+	int REQUIRED_CHARACTERISTICS = ORDERED | DISTINCT | SORTED | NONNULL;
+
+	/**
+	 * The order-flow comparator which sorts orders by time, older orders first, then by ID.
+	 */
+	Comparator<Order> COMPARATOR = Comparator.<Order, Instant>comparing(o -> o.getTime()).thenComparing(o -> o.getId()); 
+
+	/**
+	 * Default implementation returning {@link #REQUIRED_CHARACTERISTICS}.
+	 * 
+	 * @return {@link #REQUIRED_CHARACTERISTICS}.
+	 */
+	@Override
+	default int characteristics() {
+		return REQUIRED_CHARACTERISTICS;
+	}
+
+	/**
+	 * Default implementation returning {@link #COMPARATOR}.
+	 * 
+	 * @return comparator sorting orders by time in ascending order
+	 */
+	default Comparator<? super Order> getComparator() {
+		return COMPARATOR;
+	}
+
 }
