@@ -26,6 +26,9 @@ package org.tools4j.fx.make.match;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +51,7 @@ import org.tools4j.fx.make.flow.OrderFlow;
 import org.tools4j.fx.make.market.MarketMaker;
 import org.tools4j.fx.make.market.MarketPrinter;
 import org.tools4j.fx.make.market.MarketPrinter.Mode;
-import org.tools4j.fx.make.market.MidMarketMaker;
+import org.tools4j.fx.make.market.SkewedMarketMaker;
 import org.tools4j.fx.make.match.MatchingEngine.PartyState;
 import org.tools4j.fx.make.position.AssetPositions;
 import org.tools4j.fx.make.position.MarketSnapshot;
@@ -65,7 +68,6 @@ public class MatchingEngineCsvTest {
 	
 	private static final File FOLDER = new File("/Users/terz/Documents/invest/fx");
 	private static final String FILE_NAME = "%s_UTC_Ticks_Bid_%s.csv";
-	private static final String MID_MARKET = "mid-market";
 	
 	private static final Map<CurrencyPair, List<Double>> PNL_USD = new LinkedHashMap<>();
 	
@@ -85,6 +87,7 @@ public class MatchingEngineCsvTest {
 			"2015.05.01_2015.05.31",//
 			"2015.06.01_2015.06.30",//
 			"2015.07.01_2015.07.31",//
+//			"2014.01.01_2014.12.31",//
 	};
 	
 	private final MarketPrinter printer = new MarketPrinter();
@@ -94,6 +97,8 @@ public class MatchingEngineCsvTest {
 	
 	private final CurrencyPair currencyPair;
 	private final String dates;
+	
+	private String partyName;
 	
 	public MatchingEngineCsvTest(CurrencyPair currencyPair, String dates) {
 		this.currencyPair = Objects.requireNonNull(currencyPair, "currencyPair is null");
@@ -148,11 +153,14 @@ public class MatchingEngineCsvTest {
 		final Currency terms = currencyPair.getTerms();
 		printer.setMode(Mode.DEALS);;
 		final OrderFlow orderFlow = new CsvOrderFlow(currencyPair, file);
-		final double spread = 10 * (terms == Currency.JPY ? 0.01 : 0.0001); 
-		final MarketMaker midMarketMaker = new MidMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, MID_MARKET, spread, 1000000);
+//		final double spread = 10 * (terms == Currency.JPY ? 0.01 : 0.0001);
+		final double spread = 12 * (terms == Currency.JPY ? 0.01 : 0.0001);
+//		final MarketMaker marketMaker = new MidMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, spread, 1000000);
+		final MarketMaker marketMaker = new SkewedMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, spread, 1000000);
+		partyName = marketMaker.getClass().getSimpleName();
 		final MatchingEngine engine = MatchingEngineImpl.builder()//
 				.addOrderFlow(orderFlow)//
-				.addMarketMaker(midMarketMaker)
+				.addMarketMaker(marketMaker)
 //				.addMarketObserver(printer)//
 				.build();
 
@@ -165,7 +173,7 @@ public class MatchingEngineCsvTest {
 		final MarketSnapshot marketSnapshot = state.getMarketSnapshot(); 
 		System.out.println(marketSnapshot);
 		System.out.println("match rounds=" + state.getMatchIndex());
-		for (final String party : state.getParties()) {
+		for (final String party : sort(state.getParties())) {
 			System.out.println("==== " + party + " ====");
 			final PartyState partyState = state.getPartyState(party);
 			final AssetPositions pos = partyState.getAssetPositions();
@@ -184,6 +192,20 @@ public class MatchingEngineCsvTest {
 			pnls = new ArrayList<>();
 			PNL_USD.put(currencyPair, pnls);
 		}
-		pnls.add(state.getPartyState(MID_MARKET).getAssetPositions().getValuator(Currency.USD).getValuation(marketSnapshot));
+		pnls.add(state.getPartyState(partyName).getAssetPositions().getValuator(Currency.USD).getValuation(marketSnapshot));
 	}
+	
+	private static final Collection<String> sort(final Collection<? extends String> parties) {
+		final String[] arr = parties.toArray(new String[parties.size()]);
+		Arrays.sort(arr, PARTY_COMPARATOR);
+		return Arrays.asList(arr);
+	}
+	private static final Comparator<String> PARTY_COMPARATOR = new Comparator<String>() {
+		public int compare(String o1, String o2) {
+			final boolean mm1 = o1.endsWith("MarketMaker");
+			final boolean mm2 = o2.endsWith("MarketMaker");
+			if (mm1 != mm2) return mm1 ? 1 : -1;
+			return o1.compareTo(o2);
+		}
+	};
 }

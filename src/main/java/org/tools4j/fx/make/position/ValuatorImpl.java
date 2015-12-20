@@ -38,7 +38,7 @@ public class ValuatorImpl implements Valuator {
 
 	public ValuatorImpl(Currency valuationCurrency, AssetPositions assetPositions) {
 		this.valuationCurrency = Objects.requireNonNull(valuationCurrency, "valuationCurrency is null");
-		this.assetPositions = Objects.requireNonNull(assetPositions, "assetPositions is null");
+		this.assetPositions = Objects.requireNonNull(assetPositions, "positionKeeper is null");
 	}
 	
 	@Override
@@ -74,6 +74,6 @@ public class ValuatorImpl implements Valuator {
 
 	@Override
 	public String toString() {
-		return getClass().getSimpleName() + "{valuationCurrency=" + valuationCurrency + ", assetPositions=" + assetPositions + "}";
+		return getClass().getSimpleName() + "{valuationCurrency=" + valuationCurrency + ", positionKeeper=" + assetPositions + "}";
 	}
 }

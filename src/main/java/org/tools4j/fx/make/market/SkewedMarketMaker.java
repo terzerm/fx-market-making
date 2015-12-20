@@ -24,9 +24,11 @@
 package org.tools4j.fx.make.market;
 
 import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
 import org.tools4j.fx.make.execution.Side;
+import org.tools4j.fx.make.position.MarketSnapshot;
 import org.tools4j.fx.make.position.PositionKeeper;
 
 /**
@@ -40,7 +42,9 @@ import org.tools4j.fx.make.position.PositionKeeper;
  * <p>
  * The class is NOT thread safe.
  */
-public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
+public class SkewedMarketMaker extends AbstractPositionAwareMarketMaker {
+
+	private static final double ZERO = 100.0;
 
 	private final double spread;
 	private final long maxQuantity;
@@ -49,11 +53,14 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 	private volatile int bidsUpdatesSinceLast = 1; 
 	private volatile int asksUpdatesSinceLast = 1; 
 
-	public MidMarketMaker(PositionKeeper positionKeeper, AssetPair<?, ?> assetPair, double spread, long maxQuantity) {
-		this(positionKeeper, assetPair, MidMarketMaker.class.getSimpleName(), spread, maxQuantity);
+	public SkewedMarketMaker(PositionKeeper positionKeeper, AssetPair<?, ?> assetPair, double spread, long maxQuantity) {
+		this(positionKeeper, assetPair, SkewedMarketMaker.class.getSimpleName(), spread, maxQuantity);
 	}
-	public MidMarketMaker(PositionKeeper positionKeeper, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity) {
+	public SkewedMarketMaker(PositionKeeper positionKeeper, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity) {
 		super(positionKeeper, assetPair, party);
+		if (assetPair.getBase() != Currency.USD && assetPair.getTerms() != Currency.USD) {
+			throw new IllegalArgumentException("base or terms must be USD: " + assetPair);
+		}
 		if (spread < 0) {
 			throw new IllegalArgumentException("spread is negative: " + spread);
 		}
@@ -71,17 +78,50 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 	
 	@Override
 	protected long nextQuantity(Side side, String party) {
+//		final double pos = getPosition();
+//		return Math.abs(pos) <= ZERO ? maxQuantity : (long)Math.abs(pos);
 		return maxQuantity;
+	}
+	
+	private boolean isBaseUSD() {
+		return Currency.USD == assetPair.getBase();
+	}
+	
+	private double getPosition() {
+		if (isBaseUSD()) {
+			return -positionKeeper.getPosition(assetPair.getTerms());
+		} else {
+			return positionKeeper.getPosition(assetPair.getBase());
+		}
+	}
+	
+	private double getValuationUSD(final double mid) {
+		return positionKeeper.getValuator(Currency.USD).getValuation(MarketSnapshot.builder().withRate(assetPair, mid).build());
 	}
 	
 	@Override
 	protected double nextPrice(Side side, String party, long desiredQuantity) {
 		final double mid = getMid();
-		if (side == Side.BUY) {
-			return Double.isNaN(mid) ? 0 : mid - spread / 2;
-		} else {
-			return Double.isNaN(mid) ? Double.POSITIVE_INFINITY : mid + spread / 2;
+		if (Double.isNaN(mid)) {
+			return side == Side.BUY ? 0 : Double.POSITIVE_INFINITY;
 		}
+		final double pos = getPosition();
+		double fInc, fDec;
+		final double log = Math.max(0, Math.log(Math.abs(pos) / (isJPY() ? 100*maxQuantity : maxQuantity)));
+		fInc = Math.pow(1.15, log);
+		fDec = Math.pow(1.15, -log);
+		if (pos > 0) {
+			return side == Side.BUY ? addHalfSpreadToMid(-fInc) : addHalfSpreadToMid(+fDec);
+		} else {
+			return side == Side.BUY ? addHalfSpreadToMid(-fDec) : addHalfSpreadToMid(+fInc);
+		}
+	}
+	
+	private final boolean isJPY() {
+		return assetPair.getBase() == Currency.JPY || assetPair.getTerms() == Currency.JPY;
+	}
+	private final double addHalfSpreadToMid(final double f) {
+		return Math.max(0, getMid() + (spread/2) * f);
 	}
 	
 	@Override
@@ -123,7 +163,7 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 		lastBid = deal.getPrice();
 		lastAsk = deal.getPrice();
 		bidsUpdatesSinceLast++; 
-		asksUpdatesSinceLast++;
+		asksUpdatesSinceLast++; 
 	}
 
 }

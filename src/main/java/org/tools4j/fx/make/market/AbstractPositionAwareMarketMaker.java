@@ -30,10 +30,11 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
 import org.tools4j.fx.make.execution.OrderImpl;
 import org.tools4j.fx.make.execution.Side;
-import org.tools4j.fx.make.position.AssetPositions;
+import org.tools4j.fx.make.position.PositionKeeper;
 
 /**
  * A {@link MarketMaker} who takes the position size into account when a single
@@ -46,12 +47,14 @@ import org.tools4j.fx.make.position.AssetPositions;
  */
 abstract public class AbstractPositionAwareMarketMaker implements MarketMaker {
 
-	protected final AssetPositions assetPositions;
+	protected final PositionKeeper positionKeeper;
 	protected final AssetPair<?, ?> assetPair;
+	protected final String party;
 
-	public AbstractPositionAwareMarketMaker(AssetPositions assetPositions, AssetPair<?, ?> assetPair) {
-		this.assetPositions = Objects.requireNonNull(assetPositions, "assetPositions is null");
+	public AbstractPositionAwareMarketMaker(PositionKeeper positionKeeper, AssetPair<?, ?> assetPair, String party) {
+		this.positionKeeper = Objects.requireNonNull(positionKeeper, "positionKeeper is null");
 		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
+		this.party = Objects.requireNonNull(party, "party is null");
 	}
 	
 	@Override
@@ -88,10 +91,19 @@ abstract public class AbstractPositionAwareMarketMaker implements MarketMaker {
 	abstract protected double nextPrice(Side side, String party, long desiredQuantity);
 
 	protected long nextConnstrainedQuantity(Side side, String party, long desiredQuantity, double price) {
-		// side is the maker side, but assetPositions expects taker side
+		// side is the maker side, but positionKeeper expects taker side
 		final Side takerSide = side.opposite();
-		final long maxQuantity = assetPositions.getMaxPossibleFillWithoutBreachingRiskLimits(assetPair, takerSide, price);
+		final long maxQuantity = positionKeeper.getMaxPossibleFillWithoutBreachingRiskLimits(assetPair, takerSide, price);
 		return maxQuantity == -1 ? desiredQuantity : Math.min(desiredQuantity, maxQuantity);
 	}
-
+	
+	@Override
+	public void onDeal(Deal deal) {
+		if (party.equals(deal.getBuyParty())) {
+			((PositionKeeper)positionKeeper).updatePosition(deal, Side.BUY);
+		} else if (party.equals(deal.getSellParty())) {
+			((PositionKeeper)positionKeeper).updatePosition(deal, Side.SELL);
+		}
+	}
+	
 }

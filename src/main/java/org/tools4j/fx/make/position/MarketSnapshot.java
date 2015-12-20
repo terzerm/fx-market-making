@@ -40,4 +40,8 @@ public interface MarketSnapshot {
 		
 		MarketSnapshot build();
 	}
+	
+	static Builder builder() {
+		return MarketSnapshotImpl.builder();
+	}
 }
