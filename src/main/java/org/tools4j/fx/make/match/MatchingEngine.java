@@ -30,7 +30,7 @@ import java.util.function.Consumer;
 import org.tools4j.fx.make.asset.Asset;
 import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.flow.OrderFlow;
-import org.tools4j.fx.make.market.LastMarketRates;
+import org.tools4j.fx.make.market.MidMarketRates;
 import org.tools4j.fx.make.market.MarketMaker;
 import org.tools4j.fx.make.market.MarketObserver;
 import org.tools4j.fx.make.position.AssetPositions;
@@ -130,7 +130,7 @@ public interface MatchingEngine {
 		 * that occurred in the market.
 		 * 
 		 * @return the current market snapshot
-		 * @see LastMarketRates
+		 * @see MidMarketRates
 		 */
 		MarketSnapshot getMarketSnapshot();
 

@@ -100,9 +100,9 @@ abstract public class AbstractPositionAwareMarketMaker implements MarketMaker {
 	@Override
 	public void onDeal(Deal deal) {
 		if (party.equals(deal.getBuyParty())) {
-			((PositionKeeper)positionKeeper).updatePosition(deal, Side.BUY);
+			positionKeeper.updatePosition(deal, Side.BUY);
 		} else if (party.equals(deal.getSellParty())) {
-			((PositionKeeper)positionKeeper).updatePosition(deal, Side.SELL);
+			positionKeeper.updatePosition(deal, Side.SELL);
 		}
 	}
 	

@@ -25,32 +25,47 @@ package org.tools4j.fx.make.market;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.tools4j.fx.make.asset.AssetPair;
 import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
+import org.tools4j.fx.make.execution.Side;
 import org.tools4j.fx.make.position.MarketSnapshot;
 import org.tools4j.fx.make.position.MarketSnapshotImpl;
 
 /**
- * Observes the market and registers deals as last market rates.
+ * Observes the market and registers deals and best orders as last market rates.
+ * The market rate is either a deal or the mid price of two best orders, whichever
+ * occurred last.
  */
-public class LastMarketRates implements MarketObserver {
+public class MidMarketRates implements MarketObserver {
 	
-	private final Map<AssetPair<?, ?>, Double> lastRates = new ConcurrentHashMap<>();
+	private final Map<AssetPair<?, ?>, double[]> lastBidAskRates = new ConcurrentHashMap<>();
 	
 	@Override
 	public void onDeal(Deal deal) {
-		lastRates.put(deal.getAssetPair(), deal.getPrice());
+		lastBidAskRates.put(deal.getAssetPair(), new double[]{deal.getPrice(), deal.getPrice()});
 	}
 	
 	@Override
 	public void onOrder(Order order) {
-		//don't include orders
+		//don't include non-best orders
+	}
+	
+	@Override
+	public void onBest(Order order) {
+		final double[] rates = lastBidAskRates.computeIfAbsent(order.getAssetPair(), k -> new double[] {0, Double.POSITIVE_INFINITY});
+		rates[order.getSide() == Side.BUY ? 0 : 1] = order.getPrice();
 	}
 	
 	public MarketSnapshot getMarketSnapshot() {
-		return new MarketSnapshotImpl(lastRates);
+		final Map<AssetPair<?, ?>, Double> lastMidRates = lastBidAskRates.keySet().stream().collect(Collectors.toMap(k -> k, k -> getMid(lastBidAskRates.get(k))));
+		return new MarketSnapshotImpl(lastMidRates);
+	}
+	
+	private static final double getMid(final double[] bidAsk) {
+		return (bidAsk[0] + bidAsk[1]) / 2;
 	}
 	
 }

@@ -48,9 +48,9 @@ import org.tools4j.fx.make.execution.OrderPriceComparator;
 import org.tools4j.fx.make.execution.Side;
 import org.tools4j.fx.make.flow.OrderFlow;
 import org.tools4j.fx.make.market.CompositeOrderFlow;
-import org.tools4j.fx.make.market.LastMarketRates;
 import org.tools4j.fx.make.market.MarketMaker;
 import org.tools4j.fx.make.market.MarketObserver;
+import org.tools4j.fx.make.market.MidMarketRates;
 import org.tools4j.fx.make.position.AssetPositions;
 import org.tools4j.fx.make.position.AssetPositionsImpl;
 import org.tools4j.fx.make.position.HighWaterMarkPositionKeeper;
@@ -89,8 +89,8 @@ public class MatchingEngineImpl implements MatchingEngine {
 		final Stream<Order> askStream = assetOrders.stream().filter(o -> o.getSide() == Side.SELL).sorted(OrderPriceComparator.SELL);
 		final Iterator<Order> bids = bidStream.iterator();
 		final Iterator<Order> asks = askStream.iterator();
-		Order bid = matchingState.notifyAndReturnNextOrderOrNull(bids);
-		Order ask = matchingState.notifyAndReturnNextOrderOrNull(asks);
+		Order bid = matchingState.notifyAndReturnNextOrderOrNull(bids, true);
+		Order ask = matchingState.notifyAndReturnNextOrderOrNull(asks, true);
 		//match as long as possible
 		while (bid != null & ask != null) {
 			long matchQty = OrderMatcher.matchQuantity(bid, ask);
@@ -121,10 +121,10 @@ public class MatchingEngineImpl implements MatchingEngine {
 				} else {
 					//no match due to risk limit breaches, try next
 					if (bidQty == 0) {
-						bid = matchingState.notifyAndReturnNextOrderOrNull(bids);
+						bid = matchingState.notifyAndReturnNextOrderOrNull(bids, false);
 					}
 					if (askQty == 0) {
-						ask = matchingState.notifyAndReturnNextOrderOrNull(asks);
+						ask = matchingState.notifyAndReturnNextOrderOrNull(asks, false);
 					}
 				}
 			} else {
@@ -134,10 +134,10 @@ public class MatchingEngineImpl implements MatchingEngine {
 		}
 		//notify market observers of the remaining unmatched orders
 		while (bid != null) {
-			bid = matchingState.notifyAndReturnNextOrderOrNull(bids);
+			bid = matchingState.notifyAndReturnNextOrderOrNull(bids, false);
 		}
 		while (ask != null) {
-			ask = matchingState.notifyAndReturnNextOrderOrNull(asks);
+			ask = matchingState.notifyAndReturnNextOrderOrNull(asks, false);
 		}
 	}
 	
@@ -200,11 +200,11 @@ public class MatchingEngineImpl implements MatchingEngine {
 		private final AtomicLong index = new AtomicLong(-1);
 		private final AtomicBoolean hasMore = new AtomicBoolean(true);
 		private final OrderFlow orderFlow = new CompositeOrderFlow(orderFlows);
-		private final LastMarketRates lastMarketRates = new LastMarketRates();
+		private final MidMarketRates midMarketRates = new MidMarketRates();
 
 		@Override
 		public MarketSnapshot getMarketSnapshot() {
-			return lastMarketRates.getMarketSnapshot();
+			return midMarketRates.getMarketSnapshot();
 		}
 
 		@Override
@@ -244,24 +244,27 @@ public class MatchingEngineImpl implements MatchingEngine {
 			return this;
 		}
 
-		public void notifyAllMarketObservers(Order order) {
-			lastMarketRates.onOrder(order);
+		public void notifyAllMarketObservers(Order order, boolean isBest) {
+			midMarketRates.onOrder(order);
 			for (final MarketObserver observer : marketObservers) {
 				observer.onOrder(order);
+				if (isBest) {
+					observer.onBest(order);
+				}
 			}
 		}
 
 		public void notifyAllMarketObservers(Deal deal) {
-			lastMarketRates.onDeal(deal);
+			midMarketRates.onDeal(deal);
 			for (final MarketObserver observer : marketObservers) {
 				observer.onDeal(deal);
 			}
 		}
 
-		private Order notifyAndReturnNextOrderOrNull(Iterator<Order> orders) {
+		private Order notifyAndReturnNextOrderOrNull(Iterator<Order> orders, boolean isBest) {
 			if (orders.hasNext()) {
 				final Order order = orders.next();
-				notifyAllMarketObservers(order);
+				notifyAllMarketObservers(order, isBest);
 				return order;
 			}
 			return null;
@@ -270,7 +273,7 @@ public class MatchingEngineImpl implements MatchingEngine {
 			if (deal.getQuantity() < order.getQuantity()) {
 				return new OrderImpl(order, order.getQuantity() - deal.getQuantity());
 			}
-			return notifyAndReturnNextOrderOrNull(orders);
+			return notifyAndReturnNextOrderOrNull(orders, false);
 		}
 
 	}

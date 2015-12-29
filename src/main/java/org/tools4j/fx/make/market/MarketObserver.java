@@ -50,4 +50,14 @@ public interface MarketObserver {
 	 *            the deal that took place in the market
 	 */
 	void onDeal(Deal deal);
+
+	/**
+	 * An order has been placed which changed the best order in the market.
+	 * 
+	 * @param order
+	 *            the order that was placed in the market and which is now best
+	 *            on its side, may include own orders if the observer is a 
+	 *            {@link MarketMaker}
+	 */
+	void onBest(Order order);
 }

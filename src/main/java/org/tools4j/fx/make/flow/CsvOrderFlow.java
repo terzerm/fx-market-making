@@ -65,18 +65,60 @@ public class CsvOrderFlow implements OrderFlow {
 	private final AssetPair<?, ?> assetPair;
 	private final String party;
 	private final BufferedReader reader;
+	private final Integer month;
 	private final AtomicLong lineNo = new AtomicLong();
 	
-	public CsvOrderFlow(AssetPair<?, ?> assetPair, File file) throws FileNotFoundException {
-		this(assetPair, file.getName(), new FileReader(file));
-	}
-	public CsvOrderFlow(AssetPair<?, ?> assetPair, String party, File file) throws FileNotFoundException {
-		this(assetPair, party, new FileReader(file));
-	}
-	public CsvOrderFlow(AssetPair<?, ?> assetPair, String party, Reader reader) {
+	private CsvOrderFlow(AssetPair<?, ?> assetPair, String party, Reader reader, Integer month) {
 		this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
 		this.party = Objects.requireNonNull(party, "party is null");
 		this.reader = reader instanceof BufferedReader ? (BufferedReader)reader : new BufferedReader(reader);
+		if (month != null && (month < 1 | month > 12)) {
+			throw new IllegalArgumentException("Illegal month, expected 1-12 but found: " + month);
+		}
+		this.month = month;
+	}
+	public static final Builder builder(final AssetPair<?, ?> assetPair, final File file) throws FileNotFoundException {
+		return builder(assetPair, file.getName(), new FileReader(file));
+	}
+	public static final Builder builder(final AssetPair<?, ?> assetPair, final String party, final Reader reader) {
+		return new BuilderImpl(assetPair, party, reader);
+	}
+	
+	public static interface Builder {
+		Builder withParty(String party);
+		/** 
+		 * Filter for a particular month
+		 * @param month the month, 1-12 for Jan to Dec
+		 * @return a filtered flow
+		 */
+		Builder forMonth(int month);
+		CsvOrderFlow build();
+	}
+	private static final class BuilderImpl implements Builder {
+		private final AssetPair<?, ?> assetPair;
+		private final Reader reader;
+		private String party;
+		private int month = 0;
+		public BuilderImpl(final AssetPair<?, ?> assetPair, final String party, final Reader reader) {
+			this.assetPair = Objects.requireNonNull(assetPair, "assetPair is null");
+			this.party = Objects.requireNonNull(party, "party is null");
+			this.reader = Objects.requireNonNull(reader, "reader is null");;
+		}
+		@Override
+		public Builder withParty(String party) {
+			this.party = Objects.requireNonNull(party, "party is null");
+			return this;
+		}
+		@Override
+		public Builder forMonth(int month) {
+			if (month < 1 | month > 12) throw new IllegalArgumentException("Illegal month, expected 1-12 but found: " + month);
+			this.month = month;
+			return this;
+		}
+		@Override
+		public CsvOrderFlow build() {
+			return new CsvOrderFlow(assetPair, party, reader, month == 0 ? null : Integer.valueOf(month));
+		}
 	}
 
 	@Override
@@ -101,20 +143,27 @@ public class CsvOrderFlow implements OrderFlow {
 		}
 		return line;
 	}
-	private List<Order> parseLine(String line) {
-		final Date date = parseDate(line);
-		final double bid = parseRate(line, 2);
-		final double ask = parseRate(line, 1);
-		final long bidVol = parseVol(line, 4);
-		final long askVol = parseVol(line, 3);
-		if (bidVol > 0 & askVol > 0) {
-			return Arrays.asList(createOrder(Side.BUY, date, bid, bidVol), createOrder(Side.SELL, date, ask, askVol));
+	protected List<Order> parseLine(String line) throws IOException {
+		Date date = parseDate(line);
+		while (!acceptDate(date)) {
+			line = readLine();
+			if (line == null) break;
+			date = parseDate(line);
 		}
-		if (bidVol > 0) {
-			return Collections.singletonList(createOrder(Side.BUY, date, bid, bidVol));
-		}
-		if (askVol > 0) {
-			return Collections.singletonList(createOrder(Side.SELL, date, ask, askVol));
+		if (acceptDate(date)) {
+			final double bid = parseRate(line, 2);
+			final double ask = parseRate(line, 1);
+			final long bidVol = parseVol(line, 4);
+			final long askVol = parseVol(line, 3);
+			if (bidVol > 0 & askVol > 0) {
+				return Arrays.asList(createOrder(Side.BUY, date, bid, bidVol), createOrder(Side.SELL, date, ask, askVol));
+			}
+			if (bidVol > 0) {
+				return Collections.singletonList(createOrder(Side.BUY, date, bid, bidVol));
+			}
+			if (askVol > 0) {
+				return Collections.singletonList(createOrder(Side.SELL, date, ask, askVol));
+			}
 		}
 		return Collections.emptyList();
 	}
@@ -127,7 +176,7 @@ public class CsvOrderFlow implements OrderFlow {
 		final int ss = Integer.parseInt(line.substring(17, 19));
 		final int ms = Integer.parseInt(line.substring(20, 23));
 		final Calendar cal = CALENDAR.get();
-		cal.set(yyyy, mM, dd, hh, mm, ss);
+		cal.set(yyyy, mM-1, dd, hh, mm, ss);
 		cal.set(Calendar.MILLISECOND, ms);
 		return cal.getTime();
 	}
@@ -150,5 +199,13 @@ public class CsvOrderFlow implements OrderFlow {
 	private Order createOrder(Side side, Date date, double rate, long quantity) {
 		return new OrderImpl(assetPair, party, side, rate, quantity);
 	}
-
+	protected boolean acceptDate(final Date date) {
+		if (month == null) {
+			return true;
+		}
+		final Calendar cal = CALENDAR.get();
+		cal.setTime(date);
+		return cal.get(Calendar.MONTH) == month-1;
+	}
+	
 }

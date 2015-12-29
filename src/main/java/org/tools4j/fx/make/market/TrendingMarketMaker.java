@@ -24,36 +24,34 @@
 package org.tools4j.fx.make.market;
 
 import org.tools4j.fx.make.asset.AssetPair;
+import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
 import org.tools4j.fx.make.execution.Side;
 import org.tools4j.fx.make.position.PositionKeeper;
 
 /**
- * A simple {@link MarketMaker} for a single symbol, party and a constant
- * quantity. The mid market maker starts making with zero BID and infinite OFFER
- * and then always offers mid rate plus some constant spread.
- * <p>
- * If the position allows the makes are one level bid/ask. If the position
- * constrains the order making bid and offered quantities are adjusted and one
- * or both sides are omitted in the making activity if necessary.
- * <p>
- * The class is NOT thread safe.
+ * Pulls off price after being hit trying to anticipate a trend in that direction.
  */
-public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
+public class TrendingMarketMaker extends AbstractPositionAwareMarketMaker {
 
 	private final double spread;
 	private final long maxQuantity;
 	private volatile double lastBid = Double.NaN;
 	private volatile double lastAsk = Double.NaN;
+	private volatile Side lastSide = null;
+	private volatile int updatesSinceOwn = 0;
 	private volatile int bidsUpdatesSinceLast = 1; 
 	private volatile int asksUpdatesSinceLast = 1; 
 
-	public MidMarketMaker(PositionKeeper positionKeeper, AssetPair<?, ?> assetPair, double spread, long maxQuantity) {
-		this(positionKeeper, assetPair, MidMarketMaker.class.getSimpleName(), spread, maxQuantity);
+	public TrendingMarketMaker(PositionKeeper positionKeeper, AssetPair<?, ?> assetPair, double spread, long maxQuantity) {
+		this(positionKeeper, assetPair, TrendingMarketMaker.class.getSimpleName(), spread, maxQuantity);
 	}
-	public MidMarketMaker(PositionKeeper positionKeeper, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity) {
+	public TrendingMarketMaker(PositionKeeper positionKeeper, AssetPair<?, ?> assetPair, String party, double spread, long maxQuantity) {
 		super(positionKeeper, assetPair, party);
+		if (assetPair.getBase() != Currency.USD && assetPair.getTerms() != Currency.USD) {
+			throw new IllegalArgumentException("base or terms must be USD: " + assetPair);
+		}
 		if (spread < 0) {
 			throw new IllegalArgumentException("spread is negative: " + spread);
 		}
@@ -77,11 +75,27 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 	@Override
 	protected double nextPrice(Side side, String party, long desiredQuantity) {
 		final double mid = getMid();
-		if (side == Side.BUY) {
-			return Double.isNaN(mid) ? 0 : mid - spread / 2;
-		} else {
-			return Double.isNaN(mid) ? Double.POSITIVE_INFINITY : mid + spread / 2;
+		if (Double.isNaN(mid)) {
+			return side == Side.BUY ? 0 : Double.POSITIVE_INFINITY;
 		}
+		final int maxUpdates = 10;
+		if (updatesSinceOwn < maxUpdates) {
+			final double fInc = Math.pow(1.05, maxUpdates-updatesSinceOwn);
+			final double fDec = Math.pow(1.05, updatesSinceOwn-maxUpdates);
+			if (lastSide == Side.BUY) {
+				//market sells, we should sell
+				return side == Side.BUY ? addHalfSpreadToMid(-fInc) : addHalfSpreadToMid(+fDec);
+			} else if (lastSide == Side.SELL) {
+				//market buys, we should buy
+				return side == Side.BUY ? addHalfSpreadToMid(-fDec) : addHalfSpreadToMid(+fInc);
+			}
+		}
+		//we're neutral
+		return side == Side.BUY ? addHalfSpreadToMid(-1) : addHalfSpreadToMid(+1);
+	}
+	
+	private final double addHalfSpreadToMid(final double f) {
+		return Math.max(0, getMid() + (spread/2) * f);
 	}
 	
 	@Override
@@ -106,9 +120,9 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 
 	@Override
 	public void onOrder(Order order) {
-		//we only take best
+		// we only want best orders
 	}
-	
+
 	@Override
 	public void onBest(Order order) {
 		if (!party.equals(order.getParty())) {
@@ -128,7 +142,16 @@ public class MidMarketMaker extends AbstractPositionAwareMarketMaker {
 		lastBid = deal.getPrice();
 		lastAsk = deal.getPrice();
 		bidsUpdatesSinceLast++; 
-		asksUpdatesSinceLast++;
+		asksUpdatesSinceLast++; 
+		if (party.equals(deal.getBuyParty())) {
+			updatesSinceOwn = 0;
+			lastSide = Side.BUY;
+		} else if (party.equals(deal.getSellParty())) {
+			updatesSinceOwn = 0;
+			lastSide = Side.SELL;
+		} else {
+			updatesSinceOwn++;
+		}
 	}
 
 }

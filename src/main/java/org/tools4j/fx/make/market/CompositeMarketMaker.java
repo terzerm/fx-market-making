@@ -68,5 +68,12 @@ public class CompositeMarketMaker extends CompositeOrderFlow implements MarketMa
 			marketMaker.onDeal(deal);
 		}
 	}
+	
+	@Override
+	public void onBest(Order order) {
+		for (final MarketMaker marketMaker : (MarketMaker[]) orderFlows) {
+			marketMaker.onBest(order);
+		}
+	}
 
 }

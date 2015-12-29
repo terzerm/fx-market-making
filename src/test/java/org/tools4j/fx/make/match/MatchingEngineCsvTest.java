@@ -51,7 +51,7 @@ import org.tools4j.fx.make.flow.OrderFlow;
 import org.tools4j.fx.make.market.MarketMaker;
 import org.tools4j.fx.make.market.MarketPrinter;
 import org.tools4j.fx.make.market.MarketPrinter.Mode;
-import org.tools4j.fx.make.market.SkewedMarketMaker;
+import org.tools4j.fx.make.market.PosTrendingMarketMaker;
 import org.tools4j.fx.make.match.MatchingEngine.PartyState;
 import org.tools4j.fx.make.position.AssetPositions;
 import org.tools4j.fx.make.position.MarketSnapshot;
@@ -80,14 +80,18 @@ public class MatchingEngineCsvTest {
 			new CurrencyPair(Currency.USD, Currency.CHF)//
 	};
 	private static final String[] DATES = {//
-			"2015.01.01_2015.01.31",//
-			"2015.02.01_2015.02.28",//
-			"2015.03.01_2015.03.31",//
-			"2015.04.01_2015.04.30",//
-			"2015.05.01_2015.05.31",//
-			"2015.06.01_2015.06.30",//
-			"2015.07.01_2015.07.31",//
-//			"2014.01.01_2014.12.31",//
+//			"2015.01.01_2015.01.31",//
+//			"2015.02.01_2015.02.28",//
+//			"2015.03.01_2015.03.31",//
+//			"2015.04.01_2015.04.30",//
+//			"2015.05.01_2015.05.31",//
+//			"2015.06.01_2015.06.30",//
+//			"2015.07.01_2015.07.31",//
+			"2014.01.01_2014.12.31",//
+//			"2013.01.01_2013.12.31",//
+//			"2012.01.01_2012.12.31",//
+//			"2011.01.01_2011.12.31",//
+//			"2010.01.01_2010.12.31",//
 	};
 	
 	private final MarketPrinter printer = new MarketPrinter();
@@ -96,21 +100,30 @@ public class MatchingEngineCsvTest {
 	public final TestName testName = new TestName();
 	
 	private final CurrencyPair currencyPair;
-	private final String dates;
+	private final String date;
+	private final int month;
 	
 	private String partyName;
 	
-	public MatchingEngineCsvTest(CurrencyPair currencyPair, String dates) {
+	public MatchingEngineCsvTest(CurrencyPair currencyPair, String date, int month) {
 		this.currencyPair = Objects.requireNonNull(currencyPair, "currencyPair is null");
-		this.dates = Objects.requireNonNull(dates, "dates is null");
+		this.date = Objects.requireNonNull(date, "date is null");
+		this.month = month;
 	}
 	
-	@Parameters(name = "{0} {1}")
+	@Parameters(name = "{0} {1}/{2}")
 	public static List<Object[]> getCurrencyPairs() {
 		final List<Object[]> list = new ArrayList<>();
 		for (final CurrencyPair ccyPair : PAIRS) {
-			for (final String dates : DATES) {
-				list.add(new Object[] {ccyPair, dates});
+			for (final String date : DATES) {
+				//2013.01.01_2013.12.31
+				if (date.contains(".01.01_") && date.contains(".12.31")) {
+					for (int month = 1; month < 12; month++) {
+						list.add(new Object[] {ccyPair, date, month});
+					}
+				} else {
+					list.add(new Object[] {ccyPair, date, 0});
+				}
 			}
 		}
 		return list;
@@ -120,7 +133,7 @@ public class MatchingEngineCsvTest {
 	@Before
 	public void beforeEach() {
 		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> " + testName.getMethodName());
-		printer.setMode(Mode.ORDERS_AND_DEALS);;
+		printer.setModes(Mode.ORDERS, Mode.DEALS);
 	}
 	
 	@AfterClass
@@ -148,15 +161,20 @@ public class MatchingEngineCsvTest {
 	@Test
 	public void shouldMatch() throws FileNotFoundException {
 		// given
-		final File file = new File(FOLDER, String.format(FILE_NAME, currencyPair.toSixCharString(), dates));
+		final File file = new File(FOLDER, String.format(FILE_NAME, currencyPair.toSixCharString(), date));
 		final Currency base = currencyPair.getBase();
 		final Currency terms = currencyPair.getTerms();
-		printer.setMode(Mode.DEALS);;
-		final OrderFlow orderFlow = new CsvOrderFlow(currencyPair, file);
+		printer.setModes(Mode.DEALS);
+		final OrderFlow orderFlow = (month == 0 ? 
+				CsvOrderFlow.builder(currencyPair, file) : 
+				CsvOrderFlow.builder(currencyPair, file).forMonth(month).withParty(file.getName() + "[month=" + month + "]")
+			).build();
 //		final double spread = 10 * (terms == Currency.JPY ? 0.01 : 0.0001);
 		final double spread = 12 * (terms == Currency.JPY ? 0.01 : 0.0001);
 //		final MarketMaker marketMaker = new MidMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, spread, 1000000);
-		final MarketMaker marketMaker = new SkewedMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, spread, 1000000);
+//		final MarketMaker marketMaker = new SkewedMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, spread, 1000000);
+//		final MarketMaker marketMaker = new TrendingMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, spread, 1000000);
+		final MarketMaker marketMaker = new PosTrendingMarketMaker(new PositionKeeperImpl(RiskLimits.UNLIMITED), currencyPair, spread, 1000000);
 		partyName = marketMaker.getClass().getSimpleName();
 		final MatchingEngine engine = MatchingEngineImpl.builder()//
 				.addOrderFlow(orderFlow)//

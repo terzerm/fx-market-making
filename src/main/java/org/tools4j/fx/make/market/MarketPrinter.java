@@ -28,6 +28,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -40,12 +43,12 @@ import org.tools4j.fx.make.execution.Order;
 public class MarketPrinter implements MarketObserver {
 	
 	private final PrintStream printStream;
-	private final AtomicReference<Mode> mode = new AtomicReference<>(Mode.ORDERS_AND_DEALS);
+	private final AtomicReference<EnumSet<Mode>> mode = new AtomicReference<>(EnumSet.allOf(Mode.class));
 	
 	public enum Mode {
 		ORDERS,//
 		DEALS,//
-		ORDERS_AND_DEALS;
+		BEST;
 	}
 	
 	public MarketPrinter() {
@@ -61,21 +64,34 @@ public class MarketPrinter implements MarketObserver {
 		this.printStream = Objects.requireNonNull(printStream, "printStream is null");
 	}
 	
-	public void setMode(Mode mode) {
-		this.mode.set(Objects.requireNonNull(mode, "mode is null"));
+	public void setModes(Mode... modes) {
+		setModes(Arrays.asList(modes));
+	}
+
+	public void setModes(Collection<? extends Mode> modes) {
+		final EnumSet<Mode> modeSet = EnumSet.noneOf(Mode.class);
+		modeSet.addAll(modes);
+		this.mode.set(modeSet);
 	}
 	
 	@Override
 	public void onOrder(Order order) {
-		if (mode.get() != Mode.DEALS) {
+		if (mode.get().contains(Mode.ORDERS)) {
 			printStream.println("ORDER:\t" + order.toShortString() + "\t(" + order.getParty() + ")");
 		}
 	}
 
 	@Override
 	public void onDeal(Deal deal) {
-		if (mode.get() != Mode.ORDERS) {
+		if (mode.get().contains(Mode.DEALS)) {
 			printStream.println("DEAL:\t" + deal.toShortString() + "\t(" + deal.getBuyParty() + " <--> " + deal.getSellParty() + ")");
+		}
+	}
+	
+	@Override
+	public void onBest(Order order) {
+		if (mode.get().contains(Mode.BEST)) {
+			printStream.println("BEST:\t" + order.toShortString() + "\t(" + order.getParty() + ")");
 		}
 	}
 

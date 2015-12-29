@@ -28,23 +28,12 @@ import org.tools4j.fx.make.asset.Currency;
 import org.tools4j.fx.make.execution.Deal;
 import org.tools4j.fx.make.execution.Order;
 import org.tools4j.fx.make.execution.Side;
-import org.tools4j.fx.make.position.MarketSnapshot;
 import org.tools4j.fx.make.position.PositionKeeper;
 
 /**
- * A simple {@link MarketMaker} for a single symbol, party and a constant
- * quantity. The mid market maker starts making with zero BID and infinite OFFER
- * and then always offers mid rate plus some constant spread.
- * <p>
- * If the position allows the makes are one level bid/ask. If the position
- * constrains the order making bid and offered quantities are adjusted and one
- * or both sides are omitted in the making activity if necessary.
- * <p>
- * The class is NOT thread safe.
+ * Skews price to reduce the current position.
  */
 public class SkewedMarketMaker extends AbstractPositionAwareMarketMaker {
-
-	private static final double ZERO = 100.0;
 
 	private final double spread;
 	private final long maxQuantity;
@@ -78,8 +67,6 @@ public class SkewedMarketMaker extends AbstractPositionAwareMarketMaker {
 	
 	@Override
 	protected long nextQuantity(Side side, String party) {
-//		final double pos = getPosition();
-//		return Math.abs(pos) <= ZERO ? maxQuantity : (long)Math.abs(pos);
 		return maxQuantity;
 	}
 	
@@ -93,10 +80,6 @@ public class SkewedMarketMaker extends AbstractPositionAwareMarketMaker {
 		} else {
 			return positionKeeper.getPosition(assetPair.getBase());
 		}
-	}
-	
-	private double getValuationUSD(final double mid) {
-		return positionKeeper.getValuator(Currency.USD).getValuation(MarketSnapshot.builder().withRate(assetPair, mid).build());
 	}
 	
 	@Override
@@ -146,6 +129,11 @@ public class SkewedMarketMaker extends AbstractPositionAwareMarketMaker {
 
 	@Override
 	public void onOrder(Order order) {
+		// we only want best orders
+	}
+
+	@Override
+	public void onBest(Order order) {
 		if (!party.equals(order.getParty())) {
 			if (order.getSide() == Side.BUY) {
 				lastBid = order.getPrice();
